@@ -132,11 +132,18 @@ export function Topbar({ setMobileOpen }: TopbarProps) {
               My Profile
             </DropdownMenuItem>
             <DropdownMenuItem
+              onClick={() => navigate('/profile')}
+              className="rounded-md px-3 py-2 cursor-pointer"
+            >
+              <Icon name="Lock" className="mr-2.5 h-4 w-4 text-muted-foreground" />
+              Change name & password
+            </DropdownMenuItem>
+            <DropdownMenuItem
               onClick={() => navigate('/settings/organization')}
               className="rounded-md px-3 py-2 cursor-pointer"
             >
               <Icon name="Settings" className="mr-2.5 h-4 w-4 text-muted-foreground" />
-              Account Settings
+              Organization Settings
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => navigate('/settings/subscription')}
