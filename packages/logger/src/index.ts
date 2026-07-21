@@ -10,8 +10,12 @@ const logFormat = printf(({ level, message, timestamp, ...metadata }) => {
   return msg;
 });
 
+const logLevel =
+  (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
+    ?.LOG_LEVEL || 'info';
+
 export const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
+  level: logLevel,
   format: combine(timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), logFormat),
   transports: [
     new winston.transports.Console({
