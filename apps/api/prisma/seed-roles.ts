@@ -138,7 +138,7 @@ async function main() {
     },
   ];
 
-  const roleMap = {};
+  const roleMap: Record<string, { id: string; name: string }> = {};
   for (const r of rolesData) {
     let role = await prisma.role.findFirst({ where: { name: r.name } });
     if (!role) {
