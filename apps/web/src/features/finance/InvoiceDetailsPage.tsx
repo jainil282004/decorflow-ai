@@ -1,12 +1,16 @@
 import { useParams, Link } from 'react-router-dom';
 import { PageHeader } from '../../components/PageHeader';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { useInvoice } from '../finance/api/financeApi';
 import { useOrganization } from '../saas/api/saasApi';
-import { exportToPdf, exportToWord, exportToExcel } from '../../utils/exportUtils';
-import { formatCurrency } from '../reports/FinancialDashboard';
+import {
+  exportToPdf,
+  exportToWord,
+  exportFinanceDocumentToExcel,
+  printDocument,
+  buildDocumentFilename,
+} from '../../utils/exportUtils';
+import { FinanceDocumentView } from '../finance/components/FinanceDocumentView';
 import { ArrowLeft, Download, Printer } from 'lucide-react';
 import {
   DropdownMenu,
@@ -14,19 +18,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../components/ui/dropdown-menu';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../../components/ui/table';
 import { Skeleton } from '../../components/ui/skeleton';
 import { EmptyState } from '../../components/ui/empty-state';
+import { useToast } from '../../hooks/use-toast';
 
 export const InvoiceDetailsPage = () => {
   const { id } = useParams();
+  const { toast } = useToast();
   const { data: invoice, isLoading } = useInvoice(id as string);
   const { data: organization } = useOrganization();
 
@@ -34,13 +32,7 @@ export const InvoiceDetailsPage = () => {
     return (
       <div className="space-y-6 p-4">
         <Skeleton className="h-24 w-full" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Skeleton className="h-[500px] md:col-span-2" />
-          <div className="space-y-6">
-            <Skeleton className="h-[200px]" />
-            <Skeleton className="h-[200px]" />
-          </div>
-        </div>
+        <Skeleton className="h-[640px] w-full" />
       </div>
     );
   }
@@ -58,14 +50,43 @@ export const InvoiceDetailsPage = () => {
     );
   }
 
-  const handleExportPdf = () => exportToPdf('invoice-document', `Invoice_${invoice.number}`);
-  const handleExportWord = () =>
-    exportToWord('Invoice', invoice, organization, `Invoice_${invoice.number}`);
-  const handleExportExcel = () => exportToExcel(invoice.items, `Invoice_${invoice.number}`);
+  const filename = buildDocumentFilename('INVOICE', invoice.number, invoice.customer?.name);
+
+  const handleExportPdf = () => exportToPdf('invoice-document', filename);
+
+  const handlePrint = () => printDocument('invoice-document');
+
+  const handleExportWord = () => exportToWord('Invoice', invoice, organization, filename);
+
+  const handleExportExcel = async () => {
+    try {
+      await exportFinanceDocumentToExcel(
+        {
+          docType: 'INVOICE',
+          number: invoice.number,
+          status: invoice.status,
+          date: invoice.date,
+          dueDate: invoice.dueDate,
+          notes: invoice.notes,
+          subTotal: invoice.subTotal,
+          taxTotal: invoice.taxTotal,
+          discountTotal: invoice.discountTotal,
+          totalAmount: invoice.totalAmount,
+          company: organization,
+          customer: invoice.customer,
+          items: invoice.items || [],
+        },
+        filename
+      );
+    } catch (error) {
+      console.error(error);
+      toast({ title: 'Could not export Excel file', variant: 'destructive' });
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
+      <div className="no-print flex flex-wrap items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
           <Link to="/finance/invoices">
             <ArrowLeft className="h-4 w-4" />
@@ -73,13 +94,13 @@ export const InvoiceDetailsPage = () => {
         </Button>
         <PageHeader
           title={`Invoice ${invoice.number}`}
-          description={`Created on ${new Date(invoice.createdAt).toLocaleDateString()}`}
+          description={`Created on ${new Date(invoice.createdAt).toLocaleDateString('en-IN')}`}
         />
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex flex-wrap gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
-                <Download className="h-4 w-4 mr-2" /> Export
+                <Download className="mr-2 h-4 w-4" /> Export
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -88,106 +109,28 @@ export const InvoiceDetailsPage = () => {
               <DropdownMenuItem onClick={handleExportWord}>Download Word</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="default" onClick={handleExportPdf}>
-            <Printer className="h-4 w-4 mr-2" /> Print
+          <Button variant="default" onClick={handlePrint}>
+            <Printer className="mr-2 h-4 w-4" /> Print
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6" id="invoice-document">
-        <Card className="md:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              {organization?.logoUrl && (
-                <img src={organization.logoUrl} alt="Company Logo" className="h-12 w-auto mb-4" />
-              )}
-              <CardTitle>{organization?.name || 'Company Name'}</CardTitle>
-            </div>
-            <div className="text-right">
-              <h1 className="text-3xl font-bold text-muted-foreground">INVOICE</h1>
-              <p className="font-medium mt-2"># {invoice.number}</p>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Quantity</TableHead>
-                  <TableHead className="text-right">Unit Price</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invoice.items?.map((item: any) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.description}</TableCell>
-                    <TableCell className="text-right">{item.quantity}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(item.unitPrice)}</TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(item.quantity * item.unitPrice)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-
-            <div className="flex justify-end mt-8">
-              <div className="w-64 space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Subtotal</span>
-                  <span>{formatCurrency(invoice.subTotal)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Tax</span>
-                  <span>{formatCurrency(invoice.taxTotal)}</span>
-                </div>
-                <div className="flex justify-between font-semibold text-lg border-t pt-2">
-                  <span>Total</span>
-                  <span>{formatCurrency(invoice.totalAmount)}</span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Status</span>
-                <Badge variant={invoice.status === 'PAID' ? 'default' : 'secondary'}>
-                  {invoice.status}
-                </Badge>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Due Date</span>
-                <span>{new Date(invoice.dueDate).toLocaleDateString()}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Customer Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              {invoice.customer ? (
-                <>
-                  <div className="font-medium">{invoice.customer.name}</div>
-                  <div className="text-muted-foreground">{invoice.customer.email}</div>
-                  <div className="text-muted-foreground">{invoice.customer.phone}</div>
-                </>
-              ) : (
-                <div className="text-muted-foreground italic">No customer linked.</div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      <FinanceDocumentView
+        documentId="invoice-document"
+        docType="INVOICE"
+        number={invoice.number}
+        status={invoice.status}
+        date={invoice.date}
+        dueDate={invoice.dueDate}
+        notes={invoice.notes}
+        subTotal={invoice.subTotal}
+        taxTotal={invoice.taxTotal}
+        discountTotal={invoice.discountTotal}
+        totalAmount={invoice.totalAmount}
+        company={organization}
+        customer={invoice.customer}
+        items={invoice.items || []}
+      />
     </div>
   );
 };

@@ -199,3 +199,30 @@
     background: transparent;
   }
 }
+
+/* Finance document print layout */
+@media print {
+  body.printing-finance-document * {
+    visibility: hidden !important;
+  }
+
+  body.printing-finance-document .finance-document.is-printing,
+  body.printing-finance-document .finance-document.is-printing * {
+    visibility: visible !important;
+  }
+
+  body.printing-finance-document .finance-document.is-printing {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+  }
+
+  body.printing-finance-document .no-print {
+    display: none !important;
+  }
+}
