@@ -1,0 +1,33 @@
+{
+  "name": "decorflow-erp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Enterprise-grade SaaS application for Event Decorators, Tent Houses, and Event Management Companies",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "start": "node apps/api/dist/server.js",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "clean": "turbo run clean",
+    "prepare": "husky",
+    "postinstall": "npm run build --workspace=@decorflow/shared && npm run build --workspace=@decorflow/logger && prisma generate --schema=apps/api/prisma/schema.prisma",
+    "db:migrate": "prisma migrate deploy --schema=apps/api/prisma/schema.prisma",
+    "db:seed": "npm run db:seed --workspace=api",
+    "db:setup": "npm run db:migrate && npm run db:seed"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.3.0",
+    "@commitlint/config-conventional": "^19.2.2",
+    "husky": "^9.0.11",
+    "lint-staged": "^15.2.5",
+    "prettier": "^3.2.5",
+    "prisma": "^5.14.0",
+    "turbo": "^1.13.3"
+  }
+}
