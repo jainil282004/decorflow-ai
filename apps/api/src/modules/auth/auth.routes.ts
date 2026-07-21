@@ -10,6 +10,8 @@ router.post('/logout', authController.logout);
 
 // Protected Routes
 router.get('/profile', requireAuth, authController.getProfile);
+router.patch('/profile', requireAuth, authController.updateProfile);
+router.post('/change-password', requireAuth, authController.changePassword);
 router.get('/permissions', requireAuth, authController.getPermissions);
 
 export const authRoutes = router;

@@ -22,6 +22,39 @@ export class AuthRepository {
     });
   }
 
+  async findUserAuthById(id: string) {
+    return prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        passwordHash: true,
+        isActive: true,
+      },
+    });
+  }
+
+  async updateUser(
+    id: string,
+    data: { name?: string; email?: string; passwordHash?: string; avatarUrl?: string | null }
+  ) {
+    return prisma.user.update({
+      where: { id },
+      data,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        avatarUrl: true,
+        isActive: true,
+        isEmailVerified: true,
+        isLocked: true,
+        isSuperAdmin: true,
+      },
+    });
+  }
+
   async createSession(userId: string, ipAddress?: string, userAgent?: string) {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 days

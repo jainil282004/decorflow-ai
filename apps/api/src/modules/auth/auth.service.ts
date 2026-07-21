@@ -77,9 +77,26 @@ export class AuthService {
     return user;
   }
 
-  async updateProfile(userId: string, data: any) {
-    // Stub for future implementation
-    return { id: userId, ...data };
+  async updateProfile(userId: string, data: { name: string; email: string; avatarUrl?: string }) {
+    const existing = await this.repo.findUserById(userId);
+    if (!existing) throw new ApiError(404, 'User not found');
+
+    const nextEmail = data.email.trim().toLowerCase();
+    if (nextEmail !== existing.email.toLowerCase()) {
+      const taken = await this.repo.findUserByEmail(nextEmail);
+      if (taken && taken.id !== userId) {
+        throw new ValidationError('Email is already in use');
+      }
+    }
+
+    const avatarUrl =
+      data.avatarUrl === undefined || data.avatarUrl === '' ? undefined : data.avatarUrl;
+
+    return this.repo.updateUser(userId, {
+      name: data.name.trim(),
+      email: nextEmail,
+      ...(avatarUrl !== undefined ? { avatarUrl } : {}),
+    });
   }
 
   async getUserPermissions(userId: string) {
@@ -95,6 +112,21 @@ export class AuthService {
   }
 
   async changePassword(userId: string, currentPassword: string, newPassword: string) {
-    // Stub for future implementation
+    const user = await this.repo.findUserAuthById(userId);
+    if (!user || !user.isActive) {
+      throw new ApiError(404, 'User not found');
+    }
+
+    const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isValid) {
+      throw new ApiError(400, 'Current password is incorrect');
+    }
+
+    if (currentPassword === newPassword) {
+      throw new ValidationError('New password must be different from the current password');
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await this.repo.updateUser(userId, { passwordHash });
   }
 }
