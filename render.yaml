@@ -25,5 +25,4 @@ services:
         sync: false
       - key: JWT_SECRET
         generateValue: true
-      - key: CORS_ORIGIN
-        sync: false
+      # CORS_ORIGIN falls back to RENDER_EXTERNAL_URL at runtime

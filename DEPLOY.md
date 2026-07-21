@@ -1,44 +1,36 @@
 # DecorFlow — free test deploy
 
+Repo: https://github.com/jainil282004/decorflow-ai
+
 ## Stack
 
-- **GitHub** — source
-- **Neon** — free Postgres
+- **GitHub** — source (done)
+- **Neon** — free Postgres (project `decorflow` created & seeded)
 - **Render** — free Web Service (API + frontend)
 
-## 1. Neon database
+## Deploy on Render (one-time)
 
-1. Create a free account at https://neon.tech
-2. Create a project (e.g. `decorflow`)
-3. Copy the connection string (`postgresql://...？sslmode=require`)
+1. Open Blueprint deploy:  
+   https://dashboard.render.com/blueprints/new?repo=https%3A%2F%2Fgithub.com%2Fjainil282004%2Fdecorflow-ai
+2. Sign in with GitHub if asked, then **Apply**.
+3. When prompted for `DATABASE_URL`, paste your Neon connection string from the Neon dashboard (project **decorflow** → Connection string).
+4. Wait for the first build (5–10 minutes on free tier).
 
-## 2. GitHub
+Optional: create a Web Service manually instead of Blueprint:
 
-Push this repo to GitHub (public is fine for a test).
+- **Repo:** `jainil282004/decorflow-ai`
+- **Build:** `npm install && npm run build && npm run db:migrate`
+- **Start:** `npm run start`
+- **Health check:** `/health`
+- **Env:**
+  - `NODE_ENV=production`
+  - `HUSKY=0`
+  - `VITE_API_URL=` (empty)
+  - `VITE_APP_ENV=production`
+  - `DATABASE_URL=` Neon URL
+  - `JWT_SECRET=` long random string
 
-## 3. Render
-
-1. Create a free account at https://render.com
-2. **New → Blueprint** and select this repo (uses `render.yaml`),  
-   **or** **New → Web Service** and connect the repo with:
-   - **Build:** `npm install && npm run build && npm run db:migrate`
-   - **Start:** `npm run start`
-   - **Health check:** `/health`
-3. Set environment variables:
-   - `DATABASE_URL` = Neon connection string
-   - `JWT_SECRET` = long random string (or let Render generate)
-   - `CORS_ORIGIN` = your Render URL, e.g. `https://decorflow.onrender.com`
-   - `NODE_ENV=production`
-   - `PORT=10000` (Render sets this; keep in sync if overridden)
-   - `VITE_API_URL=` (empty — same-origin API)
-4. Deploy. After the first successful deploy, seed login users once:
-
-```bash
-# From Render Shell (or locally against Neon):
-npm run db:seed
-```
-
-## 4. Login
+## Login
 
 - URL: `https://YOUR-SERVICE.onrender.com`
 - Email: `owner@decorflow.com`
@@ -46,5 +38,6 @@ npm run db:seed
 
 ## Notes
 
-- Free Render services **sleep** after ~15 minutes idle; the first request after sleep can take 30–60s.
-- Local API `.env` should use the same Neon `DATABASE_URL` (SQLite is no longer used).
+- Free Render sleeps after ~15 minutes idle; first hit after sleep can take 30–60s.
+- Neon DB is already migrated and seeded from this machine.
+- Local API uses `apps/api/.env` (gitignored) with the Neon `DATABASE_URL`.

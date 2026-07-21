@@ -9,7 +9,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   JWT_SECRET: z.string().min(10),
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'http', 'debug']).default('info'),
-  CORS_ORIGIN: z.string().default('http://localhost:5173'),
+  CORS_ORIGIN: z.string().optional().default(''),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
@@ -19,4 +19,8 @@ if (!parsedEnv.success) {
   process.exit(1);
 }
 
-export const env = parsedEnv.data;
+export const env = {
+  ...parsedEnv.data,
+  CORS_ORIGIN:
+    parsedEnv.data.CORS_ORIGIN || process.env.RENDER_EXTERNAL_URL || 'http://localhost:5173',
+};

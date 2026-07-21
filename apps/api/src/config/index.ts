@@ -5,7 +5,7 @@ export const appConfig = {
   env: env.NODE_ENV,
   isProduction: env.NODE_ENV === 'production',
   logLevel: env.LOG_LEVEL,
-  corsOrigin: env.CORS_ORIGIN,
+  corsOrigin: env.CORS_ORIGIN || process.env.RENDER_EXTERNAL_URL || 'http://localhost:5173',
 };
 
 export const dbConfig = {
