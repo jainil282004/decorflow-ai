@@ -30,7 +30,7 @@ export const TripDetailsPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const { data: trip, isLoading } = useTrip(id as string);
+  const { data: trip, isLoading, isError, refetch } = useTrip(id as string);
   const dispatchMutation = useDispatchTrip();
   const completeMutation = useCompleteTrip();
 
@@ -57,6 +57,20 @@ export const TripDetailsPage = () => {
         </div>
       </div>
     );
+
+  if (isError) {
+    return (
+      <div className="pt-12">
+        <EmptyState
+          title="Could not load trip"
+          description="Something went wrong while fetching this trip. Check your connection and try again."
+          actionLabel="Try again"
+          onAction={() => refetch()}
+        />
+      </div>
+    );
+  }
+
   if (!trip)
     return (
       <div className="pt-12">

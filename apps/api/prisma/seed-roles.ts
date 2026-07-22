@@ -31,6 +31,7 @@ const ALL_PERMISSIONS = [
   'packing.verify',
   'dispatch.create',
   'return.receive',
+  'cleaning.update',
   // Logistics
   'vehicle.view',
   'vehicle.create',
@@ -134,6 +135,7 @@ async function main() {
         'packing.verify',
         'dispatch.create',
         'return.receive',
+        'cleaning.update',
       ],
     },
   ];

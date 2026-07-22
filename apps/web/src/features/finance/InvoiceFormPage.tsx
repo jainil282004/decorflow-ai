@@ -18,6 +18,7 @@ import { useCreateInvoice } from '../finance/api/financeApi';
 import { useCustomers } from '../customers/api/customersApi';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
+import { DEFAULT_TAX_RATE, DEFAULT_TAX_RATE_PERCENT } from '../../config/tax';
 
 const itemSchema = z.object({
   description: z.string().min(1, 'Required'),
@@ -57,7 +58,7 @@ export const InvoiceFormPage = () => {
 
   const watchedItems = form.watch('items');
   const subtotal = watchedItems.reduce((acc, item) => acc + item.quantity * item.unitPrice, 0);
-  const tax = subtotal * 0.18; // Mock 18% GST
+  const tax = subtotal * DEFAULT_TAX_RATE;
   const total = subtotal + tax;
 
   const onSubmit = (data: any) => {
@@ -70,7 +71,7 @@ export const InvoiceFormPage = () => {
       totalAmount: total,
       items: data.items.map((i: any) => ({
         ...i,
-        taxRate: 18,
+        taxRate: DEFAULT_TAX_RATE_PERCENT,
         totalPrice: i.quantity * i.unitPrice,
       })),
     };
@@ -230,7 +231,7 @@ export const InvoiceFormPage = () => {
                     <span>₹{subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Tax (18%)</span>
+                    <span className="text-muted-foreground">Tax ({DEFAULT_TAX_RATE_PERCENT}%)</span>
                     <span>₹{tax.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg pt-2 border-t">

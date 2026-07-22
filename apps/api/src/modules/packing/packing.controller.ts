@@ -44,6 +44,19 @@ export class PackingController {
     }
   }
 
+  async startPacking(req: Request, res: Response, next: NextFunction) {
+    try {
+      const job = await packingService.startPacking(
+        req.params.id,
+        req.user!.companyId!,
+        req.user!.id
+      );
+      return sendSuccess(res, job);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async updateItems(req: Request, res: Response, next: NextFunction) {
     try {
       const data = updatePackingItemSchema.parse(req.body);

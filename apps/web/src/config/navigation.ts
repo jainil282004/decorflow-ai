@@ -36,18 +36,10 @@ export const navigationConfig: NavGroup[] = [
     label: 'Inventory',
     items: [
       { label: 'Catalog', path: '/inventory', icon: 'Package', permissions: ['inventory.view'] },
-      {
-        label: 'Warehouses',
-        path: '/warehouse',
-        icon: 'Warehouse',
-        permissions: ['inventory.view'],
-      },
-      {
-        label: 'Reservations',
-        path: '/inventory/reservations',
-        icon: 'CalendarClock',
-        permissions: ['inventory.view'],
-      },
+      // TODO(Step 5 Path B): Warehouses + Reservations hidden from nav until warehouse/reservations
+      // backend exists. Routes/pages remain at /warehouse and /inventory/reservations — re-add here:
+      // { label: 'Warehouses', path: '/warehouse', icon: 'Warehouse', permissions: ['inventory.view'] },
+      // { label: 'Reservations', path: '/inventory/reservations', icon: 'CalendarClock', permissions: ['inventory.view'] },
       { label: 'Packing', path: '/packing', icon: 'BoxSelect', permissions: ['packing.view'] },
       { label: 'Cleaning', path: '/cleaning', icon: 'Sparkles', permissions: ['inventory.view'] },
     ],

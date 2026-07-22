@@ -22,6 +22,7 @@ import {
   FormMessage,
 } from '../../components/ui/form';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
+import { Checkbox } from '../../components/ui/checkbox';
 
 export const InventoryFormPage = () => {
   const { id } = useParams();
@@ -53,6 +54,7 @@ export const InventoryFormPage = () => {
       maxStock: null,
       bufferHours: 0,
       notes: '',
+      requiresCleaning: false,
     },
   });
 
@@ -77,6 +79,7 @@ export const InventoryFormPage = () => {
         maxStock: item.maxStock,
         bufferHours: item.bufferHours || 0,
         notes: item.notes || '',
+        requiresCleaning: item.requiresCleaning ?? false,
       });
     }
   }, [data, form]);
@@ -413,6 +416,28 @@ export const InventoryFormPage = () => {
                           Time needed between events (cleaning, drying, etc.)
                         </p>
                         <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="requiresCleaning"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3 md:col-span-2">
+                        <FormControl>
+                          <Checkbox
+                            checked={!!field.value}
+                            onCheckedChange={(checked) => field.onChange(checked === true)}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Requires washing / cleaning</FormLabel>
+                          <p className="text-xs text-muted-foreground">
+                            Enable for cloths, carpets, chandarva, flooring covers, and similar
+                            washable materials. They will appear in Cleaning reminders after event
+                            returns.
+                          </p>
+                        </div>
                       </FormItem>
                     )}
                   />

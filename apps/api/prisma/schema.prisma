@@ -575,6 +575,7 @@ model InventoryItem {
   unit         String?
   status       String  @default("AVAILABLE") // AVAILABLE, RESERVED, DAMAGED, RETIRED
   bufferHours  Int? // Overrides category default if set
+  requiresCleaning Boolean @default(false) // Washable materials: cloths, carpets, chandarva, etc.
 
   currentQuantity   Int @default(0)
   availableQuantity Int @default(0)

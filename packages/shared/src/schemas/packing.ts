@@ -21,15 +21,18 @@ export const createPackingJobSchema = z.object({
 export type CreatePackingJobDTO = z.infer<typeof createPackingJobSchema>;
 
 export const updatePackingItemSchema = z.object({
-  items: z.array(
-    z.object({
-      id: z.string().min(1, 'Invalid item ID'),
-      pickedQuantity: z.number().int().min(0).optional(),
-      missingQuantity: z.number().int().min(0).optional(),
-      damagedQuantity: z.number().int().min(0).optional(),
-      packingNotes: z.string().optional(),
-    })
-  ),
+  items: z
+    .array(
+      z.object({
+        id: z.string().min(1, 'Invalid item ID'),
+        // Explicit staff-entered pick count — required so Start Packing cannot imply picks.
+        pickedQuantity: z.number().int().min(0),
+        missingQuantity: z.number().int().min(0).optional(),
+        damagedQuantity: z.number().int().min(0).optional(),
+        packingNotes: z.string().optional(),
+      })
+    )
+    .min(1, 'At least one packing line must be updated'),
 });
 
 export type UpdatePackingItemDTO = z.infer<typeof updatePackingItemSchema>;

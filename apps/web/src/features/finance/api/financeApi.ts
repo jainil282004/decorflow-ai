@@ -51,9 +51,12 @@ export const useUpdateQuotationStatus = () => {
       const { data } = await apiClient.patch(`/finance/quotations/${id}/status`, { status });
       return data.data;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['quotations'] });
       queryClient.invalidateQueries({ queryKey: ['quotations', variables.id] });
+      if (variables.status === 'APPROVED') {
+        queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      }
     },
   });
 };

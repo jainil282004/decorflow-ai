@@ -19,25 +19,31 @@ interface Props {
   onProcessReturn: (data: ReceiveReturnDTO) => void;
 }
 
-export const InventoryConditionDialog = ({ open, onOpenChange, job, onProcessReturn }: Props) => {
-  const [returnItems, setReturnItems] = useState<any[]>(
-    job.items.map((i: any) => ({
+const buildReturnItems = (job: any) =>
+  (job.items || []).map((i: any) => {
+    const requiresCleaning = Boolean(i.variant?.item?.requiresCleaning);
+    const picked = i.pickedQuantity || 0;
+    return {
       id: i.id,
-      expected: i.pickedQuantity,
-      returnedQuantity: i.pickedQuantity,
+      expected: picked,
+      name: i.variant?.item?.name || i.variant?.name || 'Item',
+      requiresCleaning,
+      returnedQuantity: picked,
       returnMissingQuantity: 0,
       returnDamagedQuantity: 0,
-      needsCleaningQuantity: 0,
+      needsCleaningQuantity: requiresCleaning ? picked : 0,
       needsRepairQuantity: 0,
       returnNotes: '',
-    }))
-  );
+    };
+  });
+
+export const InventoryConditionDialog = ({ open, onOpenChange, job, onProcessReturn }: Props) => {
+  const [returnItems, setReturnItems] = useState<any[]>(() => buildReturnItems(job));
 
   const handleItemChange = (index: number, field: string, value: number | string) => {
     const newItems = [...returnItems];
     newItems[index] = { ...newItems[index], [field]: value };
 
-    // Auto-calculate returned quantity based on missing/damaged
     if (
       typeof value === 'number' &&
       ['returnMissingQuantity', 'returnDamagedQuantity'].includes(field)
@@ -72,22 +78,27 @@ export const InventoryConditionDialog = ({ open, onOpenChange, job, onProcessRet
         <DialogHeader>
           <DialogTitle className="font-serif text-xl">Process Returns</DialogTitle>
           <DialogDescription>
-            Record the condition of returned items. Report missing, damaged, or items requiring
-            maintenance.
+            Record the condition of returned items. Washable materials (cloths, carpets, chandarva,
+            etc.) default to Needs Cleaning so they appear in Cleaning reminders.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {job.items.map((item: any, index: number) => (
+          {returnItems.map((item: any, index: number) => (
             <div
               key={item.id}
               className="p-4 border border-border rounded-xl space-y-4 bg-muted/20"
             >
               <div className="flex justify-between items-center pb-2 border-b border-border/50">
-                <span className="font-medium">{item.variant?.name || 'Unknown Item'}</span>
-                <span className="text-sm text-muted-foreground">
-                  Dispatched: {item.pickedQuantity}
-                </span>
+                <div>
+                  <span className="font-medium">{item.name}</span>
+                  {item.requiresCleaning && (
+                    <p className="text-xs text-amber-700 mt-0.5">
+                      Washable — will appear in Cleaning reminders
+                    </p>
+                  )}
+                </div>
+                <span className="text-sm text-muted-foreground">Dispatched: {item.expected}</span>
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -98,7 +109,7 @@ export const InventoryConditionDialog = ({ open, onOpenChange, job, onProcessRet
                   <Input
                     type="number"
                     min="0"
-                    value={returnItems[index].returnedQuantity}
+                    value={item.returnedQuantity}
                     onChange={(e) =>
                       handleItemChange(index, 'returnedQuantity', parseInt(e.target.value) || 0)
                     }
@@ -111,7 +122,7 @@ export const InventoryConditionDialog = ({ open, onOpenChange, job, onProcessRet
                   <Input
                     type="number"
                     min="0"
-                    value={returnItems[index].returnMissingQuantity}
+                    value={item.returnMissingQuantity}
                     onChange={(e) =>
                       handleItemChange(
                         index,
@@ -128,7 +139,7 @@ export const InventoryConditionDialog = ({ open, onOpenChange, job, onProcessRet
                   <Input
                     type="number"
                     min="0"
-                    value={returnItems[index].returnDamagedQuantity}
+                    value={item.returnDamagedQuantity}
                     onChange={(e) =>
                       handleItemChange(
                         index,
@@ -145,7 +156,7 @@ export const InventoryConditionDialog = ({ open, onOpenChange, job, onProcessRet
                   <Input
                     type="number"
                     min="0"
-                    value={returnItems[index].needsCleaningQuantity}
+                    value={item.needsCleaningQuantity}
                     onChange={(e) =>
                       handleItemChange(
                         index,
@@ -162,7 +173,7 @@ export const InventoryConditionDialog = ({ open, onOpenChange, job, onProcessRet
                   <Input
                     type="number"
                     min="0"
-                    value={returnItems[index].needsRepairQuantity}
+                    value={item.needsRepairQuantity}
                     onChange={(e) =>
                       handleItemChange(index, 'needsRepairQuantity', parseInt(e.target.value) || 0)
                     }
@@ -176,7 +187,7 @@ export const InventoryConditionDialog = ({ open, onOpenChange, job, onProcessRet
                 </Label>
                 <Input
                   placeholder="Optional notes about condition..."
-                  value={returnItems[index].returnNotes}
+                  value={item.returnNotes}
                   onChange={(e) => handleItemChange(index, 'returnNotes', e.target.value)}
                 />
               </div>

@@ -97,4 +97,33 @@ export class AuthRepository {
     });
     return prisma.session.delete({ where: { id: sessionId } });
   }
+
+  async deletePasswordResetTokensForUser(userId: string) {
+    return prisma.passwordResetToken.deleteMany({ where: { userId } });
+  }
+
+  async createPasswordResetToken(userId: string, tokenHash: string, expiresAt: Date) {
+    return prisma.passwordResetToken.create({
+      data: { userId, tokenHash, expiresAt },
+    });
+  }
+
+  async findPasswordResetToken(tokenHash: string) {
+    return prisma.passwordResetToken.findUnique({
+      where: { tokenHash },
+      include: { user: true },
+    });
+  }
+
+  async deletePasswordResetTokenById(id: string) {
+    return prisma.passwordResetToken.delete({ where: { id } });
+  }
+
+  async revokeAllSessionsForUser(userId: string) {
+    await prisma.refreshToken.updateMany({
+      where: { userId },
+      data: { isRevoked: true },
+    });
+    await prisma.session.deleteMany({ where: { userId } });
+  }
 }

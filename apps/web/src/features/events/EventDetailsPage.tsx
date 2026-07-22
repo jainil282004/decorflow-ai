@@ -6,16 +6,55 @@ import { Icon } from '../../components/ui/icon';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { format } from 'date-fns';
+import { Skeleton } from '../../components/ui/skeleton';
+import { EmptyState } from '../../components/ui/empty-state';
+import { AlertCircle } from 'lucide-react';
 
 export const EventDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { data, isLoading, isError } = useEvent(id as string);
+  const { data, isLoading, isError, refetch } = useEvent(id as string);
   const deleteMutation = useDeleteEvent();
   const restoreMutation = useRestoreEvent();
 
-  if (isLoading) return <div className="p-8">Loading...</div>;
-  if (isError || !data?.data) return <div className="p-8 text-destructive">Event not found</div>;
+  if (isLoading) {
+    return (
+      <div className="space-y-6 p-4 md:p-8">
+        <Skeleton className="h-24 w-full" />
+        <div className="grid gap-6 md:grid-cols-2">
+          <Skeleton className="h-[280px]" />
+          <Skeleton className="h-[280px]" />
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="pt-12 px-4">
+        <EmptyState
+          title="Could not load event"
+          description="Something went wrong while fetching this event. Check your connection and try again."
+          icon={<AlertCircle className="w-12 h-12 text-destructive/60" />}
+          actionLabel="Try again"
+          onAction={() => refetch()}
+        />
+      </div>
+    );
+  }
+
+  if (!data?.data) {
+    return (
+      <div className="pt-12 px-4">
+        <EmptyState
+          title="Event not found"
+          description="This event does not exist or may have been removed."
+          actionLabel="Back to Events"
+          onAction={() => navigate('/events')}
+        />
+      </div>
+    );
+  }
 
   const event = data.data;
   const isArchived = !!event.deletedAt;

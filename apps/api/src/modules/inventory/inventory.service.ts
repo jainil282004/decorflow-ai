@@ -141,6 +141,19 @@ export class InventoryService {
 
     const eventIds = overlappingEvents.map((e) => e.id);
 
+    // Dirty stock held by open NEEDS_CLEANING conditions (cleared when cleaning job → DONE).
+    // Not the same as packing reservations — packing RETURNED releases reserved qty but leaves
+    // NEEDS_CLEANING until washed, so these must not double-count with each other.
+    const dirtyAgg = await prisma.inventoryCondition.aggregate({
+      where: {
+        variantId,
+        condition: 'NEEDS_CLEANING',
+      },
+      _sum: { quantity: true },
+    });
+    const needsCleaningQty = dirtyAgg._sum.quantity || 0;
+
+    let currentlyReserved = 0;
     if (eventIds.length > 0) {
       // Find total reserved quantity in these events for this variant
       const reserved = await prisma.packingJobItem.aggregate({
@@ -154,17 +167,18 @@ export class InventoryService {
         _sum: { expectedQuantity: true },
       });
 
-      const currentlyReserved = reserved._sum.expectedQuantity || 0;
+      currentlyReserved = reserved._sum.expectedQuantity || 0;
+    }
 
-      // Basic available quantity formula
-      const available = item.currentQuantity - item.damagedQuantity - currentlyReserved;
+    // Basic available quantity formula
+    const available =
+      item.currentQuantity - item.damagedQuantity - currentlyReserved - needsCleaningQty;
 
-      if (available < requiredQuantity) {
-        throw new ApiError(
-          400,
-          `Cannot double-book: only ${Math.max(0, available)} available due to ${bufferHours}h buffer and overlapping events.`
-        );
-      }
+    if (available < requiredQuantity) {
+      throw new ApiError(
+        400,
+        `Cannot double-book: only ${Math.max(0, available)} available due to ${bufferHours}h buffer, cleaning hold, and overlapping events.`
+      );
     }
     return true;
   }

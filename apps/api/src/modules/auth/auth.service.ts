@@ -5,6 +5,15 @@ import { ApiError, ValidationError } from '../../utils/errors';
 import { signAccessToken, signRefreshToken } from '../../utils/jwt';
 import { LoginDTO } from '@decorflow/shared';
 import { PermissionService } from './permission.service';
+import { sendMail } from '../../lib/mail';
+import { env } from '../../config/env';
+import { logger } from '@decorflow/logger';
+
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+function hashResetToken(rawToken: string) {
+  return crypto.createHash('sha256').update(rawToken).digest('hex');
+}
 
 export class AuthService {
   private repo = new AuthRepository();
@@ -103,12 +112,77 @@ export class AuthService {
     return this.permissionService.getUserPermissions(userId);
   }
 
+  /**
+   * Request a password reset. Always resolves successfully to avoid email enumeration.
+   * Creates a time-limited opaque token (stored hashed), emails a reset link.
+   */
   async forgotPassword(email: string) {
-    // Stub for future implementation
+    const normalized = email.trim().toLowerCase();
+    const user = await this.repo.findUserByEmail(normalized);
+
+    if (!user || !user.isActive) {
+      return;
+    }
+
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = hashResetToken(rawToken);
+    const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS);
+
+    await this.repo.deletePasswordResetTokensForUser(user.id);
+    await this.repo.createPasswordResetToken(user.id, tokenHash, expiresAt);
+
+    const resetUrl = `${env.APP_URL.replace(/\/$/, '')}/reset-password?token=${rawToken}`;
+
+    try {
+      await sendMail({
+        to: user.email,
+        subject: 'Reset your DecorFlow password',
+        text: [
+          `Hi ${user.name || 'there'},`,
+          '',
+          'We received a request to reset your DecorFlow password.',
+          `Open this link within 1 hour to choose a new password:`,
+          resetUrl,
+          '',
+          'If you did not request this, you can ignore this email.',
+        ].join('\n'),
+        html: `
+          <p>Hi ${user.name || 'there'},</p>
+          <p>We received a request to reset your DecorFlow password.</p>
+          <p><a href="${resetUrl}">Reset your password</a> (link expires in 1 hour).</p>
+          <p>If you did not request this, you can ignore this email.</p>
+        `,
+      });
+    } catch (error) {
+      logger.error('Password reset email failed', { userId: user.id, error });
+      // Do not leak mail failures to the client (same generic response).
+    }
   }
 
+  /**
+   * Confirm password reset with the raw token from the email link.
+   * Validates hash + expiry, updates password, invalidates token and sessions.
+   */
   async resetPassword(token: string, password: string) {
-    // Stub for future implementation
+    const tokenHash = hashResetToken(token);
+    const stored = await this.repo.findPasswordResetToken(tokenHash);
+
+    if (!stored || stored.expiresAt < new Date()) {
+      if (stored) {
+        await this.repo.deletePasswordResetTokenById(stored.id);
+      }
+      throw new ApiError(400, 'Invalid or expired reset token');
+    }
+
+    if (!stored.user.isActive) {
+      throw new ApiError(400, 'Invalid or expired reset token');
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    await this.repo.updateUser(stored.userId, { passwordHash });
+    await this.repo.deletePasswordResetTokensForUser(stored.userId);
+    await this.repo.revokeAllSessionsForUser(stored.userId);
   }
 
   async changePassword(userId: string, currentPassword: string, newPassword: string) {

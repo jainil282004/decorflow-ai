@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   usePackingJob,
+  useStartPacking,
   useUpdatePackingItems,
   useVerifyPacking,
   useDispatchJob,
@@ -10,6 +11,7 @@ import {
 import { PageHeader } from '../../components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
 import { Icon } from '../../components/ui/icon';
 import { Loader2 } from 'lucide-react';
 import { Skeleton } from '../../components/ui/skeleton';
@@ -19,14 +21,26 @@ import { InventoryConditionDialog } from './components/InventoryConditionDialog'
 export const PackingDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: job, isLoading } = usePackingJob(id!);
+  const { data: job, isLoading, isError, refetch } = usePackingJob(id!);
 
+  const startPacking = useStartPacking(id!);
   const updateItems = useUpdatePackingItems(id!);
   const verifyJob = useVerifyPacking(id!);
   const dispatchJob = useDispatchJob(id!);
   const receiveReturns = useReceiveReturns(id!);
 
   const [conditionDialogOpen, setConditionDialogOpen] = useState(false);
+  /** Draft picked qty keyed by packing line id — staff must enter these explicitly. */
+  const [pickedDraft, setPickedDraft] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (!job?.items) return;
+    const next: Record<string, number> = {};
+    for (const item of job.items) {
+      next[item.id] = item.pickedQuantity ?? 0;
+    }
+    setPickedDraft(next);
+  }, [job?.id, job?.status, job?.items]);
 
   if (isLoading) {
     return (
@@ -36,6 +50,19 @@ export const PackingDetailsPage = () => {
           <Skeleton className="h-[400px] md:col-span-2" />
           <Skeleton className="h-[400px]" />
         </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="pt-12">
+        <EmptyState
+          title="Could not load packing job"
+          description="Something went wrong while fetching this job. Check your connection and try again."
+          actionLabel="Try again"
+          onAction={() => refetch()}
+        />
       </div>
     );
   }
@@ -53,14 +80,22 @@ export const PackingDetailsPage = () => {
     );
   }
 
+  const canEditPicks = job.status === 'PACKING';
+  const allLinesConfirmed =
+    job.items?.length > 0 &&
+    job.items.every((item: any) => (pickedDraft[item.id] ?? 0) === item.expectedQuantity);
+
   const handleStartPacking = () => {
-    // In a real app, this would open a picking checklist interface.
-    // For now, we'll just mock auto-picking everything.
+    // Opens the packing session only — does not mark any quantities as picked.
+    startPacking.mutate();
+  };
+
+  const handleSavePicks = () => {
     const items = job.items.map((i: any) => ({
       id: i.id,
-      pickedQuantity: i.expectedQuantity,
-      missingQuantity: 0,
-      damagedQuantity: 0,
+      pickedQuantity: pickedDraft[i.id] ?? 0,
+      missingQuantity: i.missingQuantity ?? 0,
+      damagedQuantity: i.damagedQuantity ?? 0,
     }));
     updateItems.mutate({ items });
   };
@@ -90,10 +125,16 @@ export const PackingDetailsPage = () => {
         description={`Status: ${job.status} | Warehouse: ${job.warehouse?.name || 'Main'}`}
       >
         <div className="flex gap-3">
-          {['PENDING', 'PACKING'].includes(job.status) && (
-            <Button onClick={handleStartPacking} disabled={updateItems.isPending}>
+          {job.status === 'PENDING' && (
+            <Button onClick={handleStartPacking} disabled={startPacking.isPending}>
+              {startPacking.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Start Packing
+            </Button>
+          )}
+          {canEditPicks && (
+            <Button onClick={handleSavePicks} disabled={updateItems.isPending}>
               {updateItems.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {job.status === 'PACKING' ? 'Continue Packing' : 'Start Packing'}
+              {allLinesConfirmed ? 'Complete Packing' : 'Save Progress'}
             </Button>
           )}
           {job.status === 'PACKED' && (
@@ -119,44 +160,101 @@ export const PackingDetailsPage = () => {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg font-serif">Packing List</CardTitle>
+              {canEditPicks && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Enter the quantity actually picked for each line, then save. Packing completes
+                  only when every line matches its expected quantity.
+                </p>
+              )}
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {job.items?.map((item: any) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between p-4 border border-border rounded-xl bg-muted/20"
-                  >
-                    <div>
-                      <h4 className="font-medium text-foreground">
-                        {item.variant?.name || 'Unknown Item'}
-                      </h4>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Expected: {item.expectedQuantity}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm font-medium">
-                        Picked:{' '}
-                        <span
-                          className={
-                            item.pickedQuantity === item.expectedQuantity
-                              ? 'text-emerald-600'
-                              : 'text-amber-600'
-                          }
-                        >
-                          {item.pickedQuantity}
-                        </span>
-                      </div>
-                      {(item.missingQuantity > 0 || item.damagedQuantity > 0) && (
-                        <div className="text-xs text-destructive mt-1">
-                          {item.missingQuantity > 0 && `Missing: ${item.missingQuantity} `}
-                          {item.damagedQuantity > 0 && `Damaged: ${item.damagedQuantity}`}
+                {!job.items?.length ? (
+                  <EmptyState
+                    title="No items on this packing list"
+                    description="This job has no line items yet. Add items when creating the packing job."
+                    className="min-h-[180px] border-0 bg-transparent"
+                  />
+                ) : (
+                  job.items.map((item: any) => {
+                    const draftPicked = pickedDraft[item.id] ?? item.pickedQuantity ?? 0;
+                    const isLineComplete = draftPicked === item.expectedQuantity;
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between gap-4 p-4 border border-border rounded-xl bg-muted/20"
+                      >
+                        <div className="min-w-0">
+                          <h4 className="font-medium text-foreground">
+                            {item.variant?.name || item.variant?.item?.name || 'Unknown Item'}
+                          </h4>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Expected: {item.expectedQuantity}
+                          </p>
                         </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                        <div className="text-right shrink-0">
+                          {canEditPicks ? (
+                            <div className="flex items-center gap-2 justify-end">
+                              <label
+                                htmlFor={`picked-${item.id}`}
+                                className="text-sm text-muted-foreground whitespace-nowrap"
+                              >
+                                Picked
+                              </label>
+                              <Input
+                                id={`picked-${item.id}`}
+                                type="number"
+                                min={0}
+                                max={item.expectedQuantity}
+                                value={draftPicked}
+                                onChange={(e) => {
+                                  const raw = e.target.value === '' ? 0 : Number(e.target.value);
+                                  const clamped = Math.max(
+                                    0,
+                                    Math.min(
+                                      item.expectedQuantity,
+                                      Number.isFinite(raw) ? Math.floor(raw) : 0
+                                    )
+                                  );
+                                  setPickedDraft((prev) => ({ ...prev, [item.id]: clamped }));
+                                }}
+                                className="w-20 text-right"
+                              />
+                            </div>
+                          ) : (
+                            <div className="text-sm font-medium">
+                              Picked:{' '}
+                              <span
+                                className={
+                                  item.pickedQuantity === item.expectedQuantity
+                                    ? 'text-emerald-600'
+                                    : 'text-amber-600'
+                                }
+                              >
+                                {item.pickedQuantity}
+                              </span>
+                            </div>
+                          )}
+                          {canEditPicks && (
+                            <p
+                              className={`text-xs mt-1 ${
+                                isLineComplete ? 'text-emerald-600' : 'text-amber-600'
+                              }`}
+                            >
+                              {isLineComplete ? 'Confirmed' : 'Not confirmed'}
+                            </p>
+                          )}
+                          {(item.missingQuantity > 0 || item.damagedQuantity > 0) && (
+                            <div className="text-xs text-destructive mt-1">
+                              {item.missingQuantity > 0 && `Missing: ${item.missingQuantity} `}
+                              {item.damagedQuantity > 0 && `Damaged: ${item.damagedQuantity}`}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </CardContent>
           </Card>

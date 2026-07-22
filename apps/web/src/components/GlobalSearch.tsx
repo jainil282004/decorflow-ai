@@ -74,7 +74,7 @@ export function GlobalSearch() {
 
           <CommandSeparator />
           <CommandGroup heading="System">
-            <CommandItem onSelect={() => handleSelect('/settings')}>
+            <CommandItem onSelect={() => handleSelect('/settings/organization')}>
               <Icon name="Settings" className="mr-2 h-4 w-4" />
               Settings
             </CommandItem>

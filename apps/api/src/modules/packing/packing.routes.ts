@@ -16,6 +16,7 @@ router.post('/', requirePermission('packing.create'), controller.createJob);
 router.patch('/:id', requirePermission('packing.update'), controller.updateItems);
 
 // Workflow Action Routes
+router.post('/:id/start', requirePermission('packing.update'), controller.startPacking);
 router.post('/:id/verify', requirePermission('packing.verify'), controller.verifyJob);
 router.post('/:id/dispatch', requirePermission('dispatch.create'), controller.dispatchJob);
 router.post('/:id/return', requirePermission('return.receive'), controller.receiveReturns);

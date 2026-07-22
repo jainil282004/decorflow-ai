@@ -1,10 +1,42 @@
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Icon } from '../../../components/ui/icon';
-import { teamStatus } from '../mockData';
+import { useEmployees, useTasks } from '../../workforce/api/workforceApi';
+import { useDrivers } from '../../logistics/api/logisticsApi';
+
+function isSameDay(iso: string, day = new Date()) {
+  const d = new Date(iso);
+  return (
+    d.getFullYear() === day.getFullYear() &&
+    d.getMonth() === day.getMonth() &&
+    d.getDate() === day.getDate()
+  );
+}
 
 export function TeamWidget() {
-  const totalTasks = teamStatus.completedTasksToday + teamStatus.openTasks;
-  const completionPercent = Math.round((teamStatus.completedTasksToday / totalTasks) * 100);
+  const { data: employees } = useEmployees();
+  const { data: tasks } = useTasks();
+  const { data: drivers } = useDrivers();
+
+  const employeeList = Array.isArray(employees) ? employees : [];
+  const taskList = Array.isArray(tasks) ? tasks : [];
+  const driverList = Array.isArray(drivers) ? drivers : [];
+
+  // No live "currently checked in" attendance list endpoint — ACTIVE employees as proxy.
+  const onDuty = employeeList.filter((e: { status: string }) => e.status === 'ACTIVE').length;
+  const driversAssigned = driverList.filter(
+    (d: { availabilityStatus: string }) => d.availabilityStatus === 'ON_TRIP'
+  ).length;
+  const openTasks = taskList.filter(
+    (t: { status: string }) => t.status === 'TODO' || t.status === 'IN_PROGRESS'
+  ).length;
+  const completedTasksToday = taskList.filter(
+    (t: { status: string; updatedAt?: string }) =>
+      t.status === 'DONE' && t.updatedAt && isSameDay(t.updatedAt)
+  ).length;
+
+  const totalTasks = completedTasksToday + openTasks;
+  const completionPercent =
+    totalTasks > 0 ? Math.round((completedTasksToday / totalTasks) * 100) : 0;
 
   // SVG ring dimensions
   const size = 80;
@@ -31,9 +63,7 @@ export function TeamWidget() {
               <Icon name="UserCheck" className="h-4 w-4 text-success stroke-[1.5]" />
             </div>
             <div className="flex flex-col">
-              <span className="text-xl font-bold tabular-nums leading-none">
-                {teamStatus.onDuty}
-              </span>
+              <span className="text-xl font-bold tabular-nums leading-none">{onDuty}</span>
               <span className="text-[10px] text-muted-foreground font-medium mt-1">On Duty</span>
             </div>
           </div>
@@ -42,9 +72,7 @@ export function TeamWidget() {
               <Icon name="Truck" className="h-4 w-4 text-info stroke-[1.5]" />
             </div>
             <div className="flex flex-col">
-              <span className="text-xl font-bold tabular-nums leading-none">
-                {teamStatus.driversAssigned}
-              </span>
+              <span className="text-xl font-bold tabular-nums leading-none">{driversAssigned}</span>
               <span className="text-[10px] text-muted-foreground font-medium mt-1">
                 Drivers Active
               </span>
@@ -56,7 +84,6 @@ export function TeamWidget() {
         <div className="flex items-center gap-5">
           <div className="relative shrink-0">
             <svg width={size} height={size} className="-rotate-90">
-              {/* Background ring */}
               <circle
                 cx={size / 2}
                 cy={size / 2}
@@ -65,7 +92,6 @@ export function TeamWidget() {
                 stroke="hsl(var(--muted))"
                 strokeWidth={strokeWidth}
               />
-              {/* Progress ring */}
               <circle
                 cx={size / 2}
                 cy={size / 2}
@@ -91,11 +117,11 @@ export function TeamWidget() {
             <div className="flex gap-4 text-xs text-muted-foreground">
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-primary" />
-                {teamStatus.completedTasksToday} Done
+                {completedTasksToday} Done
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-muted" />
-                {teamStatus.openTasks} Open
+                {openTasks} Open
               </span>
             </div>
           </div>

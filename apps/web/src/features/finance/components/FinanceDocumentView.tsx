@@ -98,7 +98,9 @@ export const FinanceDocumentView = ({
                 src={company.logoUrl}
                 alt={`${company?.name || 'Company'} logo`}
                 className="h-full w-full object-contain p-1"
-                crossOrigin="anonymous"
+                {...(company.logoUrl.startsWith('http')
+                  ? { crossOrigin: 'anonymous' as const }
+                  : {})}
               />
             ) : (
               <span className="px-1 text-center text-[10px] font-medium uppercase tracking-wide text-[#8a7a68]">

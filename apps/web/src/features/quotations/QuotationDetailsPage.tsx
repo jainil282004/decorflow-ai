@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../components/PageHeader';
 import { Button } from '../../components/ui/button';
 import { useQuotation, useUpdateQuotationStatus } from '../finance/api/financeApi';
@@ -24,8 +24,9 @@ import { useToast } from '../../hooks/use-toast';
 
 export const QuotationDetailsPage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { toast } = useToast();
-  const { data: quotation, isLoading } = useQuotation(id as string);
+  const { data: quotation, isLoading, isError, refetch } = useQuotation(id as string);
   const { data: organization } = useOrganization();
   const updateStatus = useUpdateQuotationStatus();
 
@@ -34,6 +35,19 @@ export const QuotationDetailsPage = () => {
       <div className="space-y-6 p-4">
         <Skeleton className="h-24 w-full" />
         <Skeleton className="h-[640px] w-full" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="pt-12">
+        <EmptyState
+          title="Could not load quotation"
+          description="Something went wrong while fetching this quotation. Check your connection and try again."
+          actionLabel="Try again"
+          onAction={() => refetch()}
+        />
       </div>
     );
   }
@@ -54,7 +68,25 @@ export const QuotationDetailsPage = () => {
   const filename = buildDocumentFilename('QUOTATION', quotation.number, quotation.customer?.name);
 
   const handleStatusChange = (status: string) => {
-    updateStatus.mutate({ id: quotation.id, status });
+    updateStatus.mutate(
+      { id: quotation.id, status },
+      {
+        onSuccess: (result: any) => {
+          if (status === 'APPROVED' && result?.invoice?.id) {
+            toast({
+              title: 'Quotation accepted',
+              description: `Invoice ${result.invoice.number} created.`,
+            });
+            navigate(`/finance/invoices/${result.invoice.id}`);
+            return;
+          }
+          toast({ title: 'Status updated' });
+        },
+        onError: () => {
+          toast({ title: 'Could not update quotation status', variant: 'destructive' });
+        },
+      }
+    );
   };
 
   const handleExportPdf = () => exportToPdf('quotation-document', filename);
@@ -109,7 +141,7 @@ export const QuotationDetailsPage = () => {
           {quotation.status === 'SENT' && (
             <>
               <Button
-                onClick={() => handleStatusChange('ACCEPTED')}
+                onClick={() => handleStatusChange('APPROVED')}
                 className="bg-green-600 hover:bg-green-700"
                 disabled={updateStatus.isPending}
               >

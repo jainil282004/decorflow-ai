@@ -25,7 +25,7 @@ import { useToast } from '../../hooks/use-toast';
 export const InvoiceDetailsPage = () => {
   const { id } = useParams();
   const { toast } = useToast();
-  const { data: invoice, isLoading } = useInvoice(id as string);
+  const { data: invoice, isLoading, isError, refetch } = useInvoice(id as string);
   const { data: organization } = useOrganization();
 
   if (isLoading) {
@@ -33,6 +33,19 @@ export const InvoiceDetailsPage = () => {
       <div className="space-y-6 p-4">
         <Skeleton className="h-24 w-full" />
         <Skeleton className="h-[640px] w-full" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="pt-12">
+        <EmptyState
+          title="Could not load invoice"
+          description="Something went wrong while fetching this invoice. Check your connection and try again."
+          actionLabel="Try again"
+          onAction={() => refetch()}
+        />
       </div>
     );
   }

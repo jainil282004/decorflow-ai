@@ -25,25 +25,33 @@ import {
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { Loader2 } from 'lucide-react';
 
+function getApiErrorMessage(err: any, fallback: string) {
+  return err?.response?.data?.error?.message || err?.response?.data?.message || fallback;
+}
+
 export const ForgotPasswordPage = () => {
-  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
 
   const form = useForm<ForgotPasswordDTO>({
     resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: { email: '' },
   });
 
   const onSubmit = async (data: ForgotPasswordDTO) => {
     try {
-      setStatus('idle');
-      await apiClient.post('/auth/forgot-password', data);
+      setStatus('loading');
+      setMessage('');
+      await apiClient.post('/auth/forgot-password', { email: data.email.trim().toLowerCase() });
       setStatus('success');
       setMessage('If an account exists, a password reset link has been sent to your email.');
     } catch (err: any) {
       setStatus('error');
-      setMessage(err.response?.data?.message || 'Something went wrong');
+      setMessage(getApiErrorMessage(err, 'Something went wrong. Please try again.'));
     }
   };
+
+  const isBusy = status === 'loading' || form.formState.isSubmitting;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
@@ -76,7 +84,7 @@ export const ForgotPasswordPage = () => {
                       <Input
                         type="email"
                         placeholder="m@example.com"
-                        disabled={status === 'success'}
+                        disabled={status === 'success' || isBusy}
                         {...field}
                       />
                     </FormControl>
@@ -86,12 +94,8 @@ export const ForgotPasswordPage = () => {
               />
             </CardContent>
             <CardFooter className="flex flex-col space-y-4">
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={form.formState.isSubmitting || status === 'success'}
-              >
-                {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" className="w-full" disabled={isBusy || status === 'success'}>
+                {isBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Send Reset Link
               </Button>
               <a

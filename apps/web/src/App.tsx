@@ -15,6 +15,9 @@ const LoginPage = React.lazy(() =>
 const ForgotPasswordPage = React.lazy(() =>
   import('./features/auth/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage }))
 );
+const ResetPasswordPage = React.lazy(() =>
+  import('./features/auth/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage }))
+);
 const ProfilePage = React.lazy(() =>
   import('./features/auth/ProfilePage').then((m) => ({ default: m.ProfilePage }))
 );
@@ -89,6 +92,9 @@ const PackingDetailsPage = React.lazy(() =>
 );
 const PackingFormPage = React.lazy(() =>
   import('./features/packing/PackingFormPage').then((m) => ({ default: m.PackingFormPage }))
+);
+const CleaningDashboard = React.lazy(() =>
+  import('./features/cleaning/CleaningDashboard').then((m) => ({ default: m.CleaningDashboard }))
 );
 
 // Fleet
@@ -222,6 +228,14 @@ function App() {
                 }
               />
               <Route
+                path="/reset-password"
+                element={
+                  <PageSuspense>
+                    <ResetPasswordPage />
+                  </PageSuspense>
+                }
+              />
+              <Route
                 path="/unauthorized"
                 element={
                   <PageSuspense>
@@ -234,7 +248,7 @@ function App() {
             {/* Protected Routes */}
             <Route element={<ProtectedRoute />}>
               <Route element={<AppShell />}>
-                <Route path="/" element={<Navigate to="/profile" replace />} />
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route
                   path="/profile"
                   element={
@@ -529,7 +543,7 @@ function App() {
                   path="/cleaning"
                   element={
                     <PageSuspense>
-                      <ComingSoonPage />
+                      <CleaningDashboard />
                     </PageSuspense>
                   }
                 />

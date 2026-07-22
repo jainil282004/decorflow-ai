@@ -21,6 +21,7 @@ export const CreateInventoryItemSchema = z.object({
   notes: z.string().optional().nullable(),
   isTracked: z.boolean().optional(),
   isActive: z.boolean().optional(),
+  requiresCleaning: z.boolean().optional(),
 });
 
 export const UpdateInventoryItemSchema = CreateInventoryItemSchema.partial();
@@ -70,6 +71,7 @@ export interface InventoryItemResponseDTO {
   notes?: string | null;
   isTracked: boolean;
   isActive: boolean;
+  requiresCleaning: boolean;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;

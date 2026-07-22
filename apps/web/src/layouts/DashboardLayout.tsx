@@ -42,7 +42,8 @@ export const DashboardLayout = () => {
     { icon: 'LayoutDashboard', label: 'Dashboard', path: '/' },
     { icon: 'Users', label: 'Customers', path: '/customers' },
     { icon: 'Package', label: 'Inventory', path: '/inventory' },
-    { icon: 'Warehouse', label: 'Warehouse', path: '/warehouse' },
+    // TODO(Step 5 Path B): Warehouse hidden until warehouse backend exists — route /warehouse remains.
+    // { icon: 'Warehouse', label: 'Warehouse', path: '/warehouse' },
     { icon: 'Calendar', label: 'Events', path: '/events' },
     { icon: 'Truck', label: 'Vehicles', path: '/vehicles' },
     { icon: 'UsersRound', label: 'Employees', path: '/employees' },
@@ -141,7 +142,7 @@ export const DashboardLayout = () => {
                 <Icon name="User" className="mr-2 h-4 w-4" />
                 Profile
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/settings')}>
+              <DropdownMenuItem onClick={() => navigate('/settings/organization')}>
                 <Icon name="Settings" className="mr-2 h-4 w-4" />
                 Settings
               </DropdownMenuItem>

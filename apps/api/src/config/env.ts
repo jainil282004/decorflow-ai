@@ -10,6 +10,11 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(10),
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'http', 'debug']).default('info'),
   CORS_ORIGIN: z.string().optional().default(''),
+  /** Public frontend base URL used in password-reset email links */
+  APP_URL: z.string().optional().default(''),
+  /** Optional Resend API key — when unset, emails are logged instead of sent */
+  RESEND_API_KEY: z.string().optional().default(''),
+  MAIL_FROM: z.string().optional().default('DecorFlow <onboarding@resend.dev>'),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
@@ -19,8 +24,11 @@ if (!parsedEnv.success) {
   process.exit(1);
 }
 
+const corsOrigin =
+  parsedEnv.data.CORS_ORIGIN || process.env.RENDER_EXTERNAL_URL || 'http://localhost:5173';
+
 export const env = {
   ...parsedEnv.data,
-  CORS_ORIGIN:
-    parsedEnv.data.CORS_ORIGIN || process.env.RENDER_EXTERNAL_URL || 'http://localhost:5173',
+  CORS_ORIGIN: corsOrigin,
+  APP_URL: parsedEnv.data.APP_URL || corsOrigin,
 };

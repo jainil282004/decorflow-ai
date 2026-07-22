@@ -48,6 +48,21 @@ export const useCreatePackingJob = () => {
   });
 };
 
+// Start packing session (status → PACKING; does not mark quantities picked)
+export const useStartPacking = (id: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const response = await apiClient.post(`/packing/${id}/start`);
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['packing', id] });
+      queryClient.invalidateQueries({ queryKey: ['packing'] });
+    },
+  });
+};
+
 // Update packing items (picked, missing, damaged quantities)
 export const useUpdatePackingItems = (id: string) => {
   const queryClient = useQueryClient();
@@ -104,6 +119,7 @@ export const useReceiveReturns = (id: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['packing', id] });
       queryClient.invalidateQueries({ queryKey: ['packing'] });
+      queryClient.invalidateQueries({ queryKey: ['cleaning'] });
     },
   });
 };

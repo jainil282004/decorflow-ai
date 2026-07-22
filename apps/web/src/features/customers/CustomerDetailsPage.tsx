@@ -5,18 +5,56 @@ import { Button } from '../../components/ui/button';
 import { Icon } from '../../components/ui/icon';
 import { Badge } from '../../components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Skeleton } from '../../components/ui/skeleton';
+import { EmptyState } from '../../components/ui/empty-state';
+import { AlertCircle } from 'lucide-react';
 
 export function CustomerDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: response, isLoading, isError } = useCustomer(id!);
+  const { data: response, isLoading, isError, refetch } = useCustomer(id!);
 
   const archiveMutation = useDeleteCustomer();
   const restoreMutation = useRestoreCustomer();
 
-  if (isLoading) return <div className="p-8 text-center">Loading...</div>;
-  if (isError || !response?.data)
-    return <div className="p-8 text-center text-destructive">Error loading customer</div>;
+  if (isLoading) {
+    return (
+      <div className="space-y-6 pb-8 p-4">
+        <Skeleton className="h-24 w-full" />
+        <div className="grid gap-6 md:grid-cols-2">
+          <Skeleton className="h-[280px]" />
+          <Skeleton className="h-[280px]" />
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="pt-12">
+        <EmptyState
+          title="Could not load customer"
+          description="Something went wrong while fetching this customer. Check your connection and try again."
+          icon={<AlertCircle className="w-12 h-12 text-destructive/60" />}
+          actionLabel="Try again"
+          onAction={() => refetch()}
+        />
+      </div>
+    );
+  }
+
+  if (!response?.data) {
+    return (
+      <div className="pt-12">
+        <EmptyState
+          title="Customer not found"
+          description="This customer does not exist or may have been removed."
+          actionLabel="Back to Customers"
+          onAction={() => navigate('/customers')}
+        />
+      </div>
+    );
+  }
 
   const customer = response.data;
 

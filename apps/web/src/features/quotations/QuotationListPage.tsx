@@ -91,7 +91,7 @@ export const QuotationListPage = () => {
                           ? 'outline'
                           : quotation.status === 'SENT'
                             ? 'secondary'
-                            : quotation.status === 'ACCEPTED'
+                            : quotation.status === 'APPROVED'
                               ? 'default'
                               : 'destructive'
                       }
