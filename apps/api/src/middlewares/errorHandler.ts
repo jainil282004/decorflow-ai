@@ -7,30 +7,33 @@ import { Prisma } from '@prisma/client';
 export const errorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
   let error = err;
 
-  // Catch Zod Validation Errors
+  // ApiError(statusCode, message, code?, isOperational?, stack?)
   if (error instanceof ZodError) {
     const message = error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ');
-    error = new ApiError(400, 'VALIDATION_ERROR', message, true);
-  }
-  // Catch Prisma Known Request Errors
-  else if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    error = new ApiError(400, message, 'VALIDATION_ERROR', true);
+  } else if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === 'P2025') {
-      error = new ApiError(404, 'NOT_FOUND', 'Resource not found', true);
+      error = new ApiError(404, 'Resource not found', 'NOT_FOUND', true);
     } else if (error.code === 'P2002') {
-      error = new ApiError(409, 'CONFLICT', 'Resource already exists', true);
+      error = new ApiError(409, 'Resource already exists', 'CONFLICT', true);
     } else {
-      // Prevent DB leak on unknown prisma errors
-      error = new ApiError(500, 'INTERNAL_ERROR', 'Internal Server Error', false, err.stack);
+      error = new ApiError(500, 'Internal Server Error', 'INTERNAL_ERROR', false, err.stack);
     }
-  }
-  // Generic Fallback
-  else if (!(error instanceof ApiError)) {
-    const statusCode = error.statusCode || 500;
+  } else if (!(error instanceof ApiError)) {
+    const statusCode = error.statusCode || error.status || 500;
     const message = error.message || 'Internal Server Error';
-    error = new ApiError(statusCode, 'INTERNAL_ERROR', message, false, err.stack);
+    const code = statusCode === 413 ? 'PAYLOAD_TOO_LARGE' : 'INTERNAL_ERROR';
+    error = new ApiError(
+      statusCode,
+      statusCode === 413
+        ? 'Upload is too large. Use a smaller logo (under ~200KB) or a URL instead.'
+        : message,
+      code,
+      statusCode < 500,
+      err.stack
+    );
   }
 
-  // Hide internal server error messages from client in production
   const isProduction = process.env.NODE_ENV === 'production';
   const clientMessage =
     error.statusCode === 500 && isProduction ? 'Internal Server Error' : error.message;

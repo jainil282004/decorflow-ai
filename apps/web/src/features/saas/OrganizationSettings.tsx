@@ -44,11 +44,11 @@ interface OrgFormData {
   language: string;
 }
 
-const MAX_LOGO_BYTES = 400_000; // ~400KB after compression
+const MAX_LOGO_BYTES = 80_000; // stay under live Express default ~100kb JSON limit until API is redeployed
 
 async function fileToCompressedDataUrl(file: File): Promise<string> {
   const bitmap = await createImageBitmap(file);
-  const maxSide = 512;
+  const maxSide = 384;
   const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
   const width = Math.max(1, Math.round(bitmap.width * scale));
   const height = Math.max(1, Math.round(bitmap.height * scale));
@@ -58,21 +58,24 @@ async function fileToCompressedDataUrl(file: File): Promise<string> {
   canvas.height = height;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Could not process image');
+  // White background so transparent PNGs don't turn black as JPEG
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, width, height);
   ctx.drawImage(bitmap, 0, 0, width, height);
   bitmap.close();
 
-  let quality = 0.9;
-  let dataUrl = canvas.toDataURL('image/png');
-  if (file.type.includes('jpeg') || file.type.includes('jpg') || file.type.includes('webp')) {
+  // Always JPEG — PNG data URLs often exceed the API body limit
+  let quality = 0.85;
+  let dataUrl = canvas.toDataURL('image/jpeg', quality);
+  while (dataUrl.length > MAX_LOGO_BYTES && quality > 0.4) {
+    quality -= 0.1;
     dataUrl = canvas.toDataURL('image/jpeg', quality);
-    while (dataUrl.length > MAX_LOGO_BYTES && quality > 0.5) {
-      quality -= 0.1;
-      dataUrl = canvas.toDataURL('image/jpeg', quality);
-    }
   }
 
-  if (dataUrl.length > MAX_LOGO_BYTES * 1.4) {
-    throw new Error('Logo is too large. Use a smaller PNG or JPG (under ~500KB).');
+  if (dataUrl.length > MAX_LOGO_BYTES) {
+    throw new Error(
+      'Logo is still too large after compression. Use a simpler image or paste a URL.'
+    );
   }
 
   return dataUrl;
@@ -129,10 +132,25 @@ export const OrganizationSettings = () => {
     );
 
   const onSubmit = (data: OrgFormData) => {
+    // Guard: never send oversized data-URL logos (old live API rejects >~100kb bodies)
+    let logoUrl = data.logoUrl || null;
+    if (logoUrl?.startsWith('data:') && logoUrl.length > MAX_LOGO_BYTES) {
+      toast({
+        title:
+          'Logo too large to save — clearing it so other settings can save. Re-upload a smaller image or use a URL.',
+        variant: 'destructive',
+      });
+      logoUrl = null;
+      form.setValue('logoUrl', '');
+    }
+
     updateOrgMutation.mutate(
       {
-        ...data,
-        logoUrl: data.logoUrl || null,
+        name: data.name,
+        timeZone: data.timeZone,
+        currency: data.currency,
+        language: data.language,
+        logoUrl,
         email: data.email || null,
         phone: data.phone || null,
         address: data.address || null,
@@ -141,11 +159,24 @@ export const OrganizationSettings = () => {
       },
       {
         onSuccess: () => toast({ title: 'Organization settings saved' }),
-        onError: (err: any) =>
+        onError: (err: any) => {
+          const apiMessage =
+            err?.response?.data?.error?.message ||
+            err?.response?.data?.message ||
+            'Could not save settings';
+          // Old live error handler put the real text in `code` for 413s
+          const code = err?.response?.data?.error?.code;
+          const title =
+            err?.response?.status === 413 || code === 'request entity too large'
+              ? 'Logo is too large for the server. Remove the logo or use an image URL, then save again.'
+              : apiMessage === 'INTERNAL_ERROR' && code
+                ? String(code)
+                : apiMessage;
           toast({
-            title: err.response?.data?.message || 'Could not save settings',
+            title,
             variant: 'destructive',
-          }),
+          });
+        },
       }
     );
   };
@@ -276,7 +307,8 @@ export const OrganizationSettings = () => {
                             />
                           </FormControl>
                           <p className="text-xs text-muted-foreground">
-                            Upload a file from your computer, or paste a direct image link.
+                            Images are compressed automatically. Or paste a direct image link
+                            instead.
                           </p>
                           <FormMessage />
                         </FormItem>

@@ -87,7 +87,7 @@ export class SaasController {
     try {
       // Security check
       if (!(req as any).user.isSuperAdmin) {
-        throw new ApiError(403, 'FORBIDDEN', 'Super Admin access required.');
+        throw new ApiError(403, 'Super Admin access required.', 'FORBIDDEN');
       }
       const data = await saasService.getPlatformStats();
       return sendSuccess(res, data);
