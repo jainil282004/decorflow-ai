@@ -38,8 +38,28 @@ export class LogisticsService {
         companyId,
         ...data,
       },
-      include: { type: true },
+      include: { type: true, assignedDriver: { include: { user: true } } },
     });
+  }
+
+  async findAllVehicleTypes(companyId: string) {
+    const defaults = ['Pickup Truck', 'Tempo', 'Truck', 'Van', 'Car'];
+    const existing = await prisma.vehicleType.findMany({
+      where: { companyId },
+      orderBy: { name: 'asc' },
+    });
+    const existingNames = new Set(existing.map((t) => t.name.toLowerCase()));
+    const missing = defaults.filter((name) => !existingNames.has(name.toLowerCase()));
+    if (missing.length) {
+      await prisma.vehicleType.createMany({
+        data: missing.map((name) => ({ companyId, name })),
+      });
+      return prisma.vehicleType.findMany({
+        where: { companyId },
+        orderBy: { name: 'asc' },
+      });
+    }
+    return existing;
   }
 
   async updateVehicle(id: string, companyId: string, data: UpdateVehicleDTO) {

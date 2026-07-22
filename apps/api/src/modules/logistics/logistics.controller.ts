@@ -36,6 +36,15 @@ export class LogisticsController {
     }
   }
 
+  async getVehicleTypes(req: Request, res: Response, next: NextFunction) {
+    try {
+      const types = await logisticsService.findAllVehicleTypes(req.user!.companyId!);
+      return sendSuccess(res, types);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async createVehicle(req: Request, res: Response, next: NextFunction) {
     try {
       const data = createVehicleSchema.parse(req.body);

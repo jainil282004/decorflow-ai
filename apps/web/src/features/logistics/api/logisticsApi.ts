@@ -22,6 +22,16 @@ export const useVehicles = () => {
   });
 };
 
+export const useVehicleTypes = () => {
+  return useQuery({
+    queryKey: ['vehicleTypes'],
+    queryFn: async () => {
+      const response = await apiClient.get('/logistics/vehicle-types');
+      return response.data.data;
+    },
+  });
+};
+
 export const useCreateVehicle = () => {
   const queryClient = useQueryClient();
   return useMutation({

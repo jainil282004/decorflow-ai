@@ -10,6 +10,7 @@ router.use(requireAuth);
 
 // Vehicles
 router.get('/vehicles', requirePermission('vehicle.view'), controller.getVehicles);
+router.get('/vehicle-types', requirePermission('vehicle.view'), controller.getVehicleTypes);
 router.get('/vehicles/:id', requirePermission('vehicle.view'), controller.getVehicleById);
 router.post('/vehicles', requirePermission('vehicle.create'), controller.createVehicle);
 router.patch('/vehicles/:id', requirePermission('vehicle.update'), controller.updateVehicle);
