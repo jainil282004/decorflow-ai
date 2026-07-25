@@ -58,7 +58,12 @@ export const LoginPage = () => {
 
       navigate('/dashboard'); // Redirect after login
     } catch (err: any) {
-      const msg = err.response?.data?.message || 'Failed to login';
+      const msg =
+        err?.response?.data?.error?.message ||
+        err?.response?.data?.message ||
+        (err?.code === 'ECONNABORTED' || err?.message?.includes('timeout')
+          ? 'Server is waking up — wait a moment and try again.'
+          : 'Failed to login');
       setError(msg);
       setHasError(true);
       // Reset shake animation
