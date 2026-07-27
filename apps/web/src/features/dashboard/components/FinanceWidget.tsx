@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui
 import { Icon } from '../../../components/ui/icon';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { useFinancialAnalytics } from '../../reports/api/analyticsApi';
+import { formatCurrency } from '../../../utils';
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.[0]) return null;
@@ -9,7 +10,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     <div className="rounded-xl border border-border bg-card px-4 py-3 shadow-modal">
       <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">{label}</p>
       <p className="text-lg font-serif font-medium text-foreground">
-        ${Number(payload[0].value).toLocaleString()}
+        {formatCurrency(Number(payload[0].value))}
       </p>
     </div>
   );
@@ -81,7 +82,9 @@ export function FinanceWidget() {
                   fontSize={11}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(value) => `$${value / 1000}k`}
+                  tickFormatter={(value) =>
+                    value >= 1000 ? `₹${(value / 1000).toFixed(0)}k` : `₹${value}`
+                  }
                   dx={-8}
                 />
                 <Tooltip

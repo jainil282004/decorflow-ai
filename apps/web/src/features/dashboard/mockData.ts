@@ -17,7 +17,7 @@ export const activityFeed = [
   {
     id: '3',
     type: 'Finance',
-    message: 'Payment of $5,000 received for INV-004',
+    message: 'Payment of ₹5,000 received for INV-004',
     time: '2h ago',
     user: 'System',
   },

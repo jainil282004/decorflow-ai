@@ -13,6 +13,7 @@ import { Badge } from '../../components/ui/badge';
 import { ErrorState } from '../../components/ui/error-state';
 import { EmptyState } from '../../components/ui/empty-state';
 import { Skeleton } from '../../components/ui/skeleton';
+import { formatCurrency } from '../../utils';
 
 export const EventListPage = () => {
   const navigate = useNavigate();
@@ -61,7 +62,7 @@ export const EventListPage = () => {
       header: 'Total Amount',
       cell: ({ row }) => {
         const amount = row.original.totalAmount;
-        return amount ? `$${amount.toFixed(2)}` : '-';
+        return amount != null ? formatCurrency(amount) : '-';
       },
     },
   ];

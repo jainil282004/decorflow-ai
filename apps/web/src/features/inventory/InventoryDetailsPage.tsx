@@ -12,6 +12,7 @@ import { Icon } from '../../components/ui/icon';
 import { Skeleton } from '../../components/ui/skeleton';
 import { EmptyState } from '../../components/ui/empty-state';
 import { AlertCircle } from 'lucide-react';
+import { formatCurrency } from '../../utils';
 
 export const InventoryDetailsPage = () => {
   const { id } = useParams();
@@ -142,15 +143,17 @@ export const InventoryDetailsPage = () => {
           <CardContent className="space-y-4">
             <div className="flex justify-between border-b pb-2">
               <span className="text-muted-foreground">Purchase Cost</span>
-              <span className="font-semibold">${item.purchasePrice?.toFixed(2)}</span>
+              <span className="font-semibold">{formatCurrency(item.purchasePrice || 0)}</span>
             </div>
             <div className="flex justify-between border-b pb-2">
               <span className="text-muted-foreground">Rental Price</span>
-              <span className="font-semibold text-green-600">${item.rentalPrice?.toFixed(2)}</span>
+              <span className="font-semibold text-green-600">
+                {formatCurrency(item.rentalPrice || 0)}
+              </span>
             </div>
             <div className="flex justify-between pb-2">
               <span className="text-muted-foreground">Replacement Value</span>
-              <span className="font-semibold">${item.replacementCost?.toFixed(2)}</span>
+              <span className="font-semibold">{formatCurrency(item.replacementCost || 0)}</span>
             </div>
           </CardContent>
         </Card>

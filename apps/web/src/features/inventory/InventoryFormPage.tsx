@@ -45,6 +45,7 @@ const InventoryFormSchema = z.object({
   serialNumber: z.string().optional().nullable(),
   batchNumber: z.string().optional().nullable(),
   unit: z.string().optional().nullable(),
+  currentQuantity: z.union([z.number().int().nonnegative(), z.nan()]).optional().nullable(),
   minStock: z.union([z.number().int().nonnegative(), z.nan()]).optional().nullable(),
   maxStock: z.union([z.number().int().nonnegative(), z.nan()]).optional().nullable(),
   bufferHours: z.union([z.number().int().nonnegative(), z.nan()]).optional().nullable(),
@@ -85,6 +86,7 @@ function toPayload(values: InventoryFormValues): CreateInventoryItemDTO {
     serialNumber: values.serialNumber || null,
     batchNumber: values.batchNumber || null,
     unit: values.unit || null,
+    currentQuantity: amount(values.currentQuantity) as number | undefined,
     minStock: amount(values.minStock) as number | undefined,
     maxStock: values.maxStock == null || Number.isNaN(values.maxStock) ? null : values.maxStock,
     bufferHours: amount(values.bufferHours) as number | undefined,
@@ -120,6 +122,7 @@ export const InventoryFormPage = () => {
       serialNumber: '',
       batchNumber: '',
       unit: 'pcs',
+      currentQuantity: undefined,
       minStock: undefined,
       maxStock: null,
       bufferHours: undefined,
@@ -153,6 +156,7 @@ export const InventoryFormPage = () => {
         serialNumber: item.serialNumber || '',
         batchNumber: item.batchNumber || '',
         unit: item.unit || 'pcs',
+        currentQuantity: item.currentQuantity,
         minStock: item.minStock,
         maxStock: item.maxStock,
         bufferHours: item.bufferHours ?? undefined,
@@ -470,10 +474,35 @@ export const InventoryFormPage = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>Stock Control Limits</CardTitle>
+                <CardTitle>Stock Quantity & Limits</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="currentQuantity"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-2">
+                        <FormLabel>Stock Quantity (how many you own)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min={0}
+                            placeholder="e.g. 50"
+                            value={field.value ?? ''}
+                            onChange={(e) => field.onChange(parseOptionalInt(e.target.value))}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
+                          />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground">
+                          Enter total pieces in warehouse. This becomes Available stock.
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <FormField
                     control={form.control}
                     name="minStock"

@@ -12,6 +12,7 @@ import { Badge } from '../../components/ui/badge';
 import { Progress } from '../../components/ui/progress';
 import { useOrganization, useSubscriptionPlans, useUpgradeSubscription } from './api/saasApi';
 import { CheckCircle2, Zap } from 'lucide-react';
+import { formatCurrency } from '../../utils';
 
 export const SubscriptionManager = () => {
   const { data: org } = useOrganization();
@@ -59,7 +60,7 @@ export const SubscriptionManager = () => {
                 {currentPlan?.name || 'Free Trial'}
               </p>
               <p className="text-muted-foreground mt-1">
-                ${currentPlan?.price || 0} /{' '}
+                {formatCurrency(currentPlan?.price || 0)} /{' '}
                 {currentPlan?.billingCycle === 'YEARLY' ? 'year' : 'month'}
               </p>
             </div>
@@ -112,7 +113,7 @@ export const SubscriptionManager = () => {
               <CardHeader>
                 <CardTitle>{plan.name}</CardTitle>
                 <div className="text-2xl font-bold">
-                  ${plan.price}
+                  {formatCurrency(plan.price)}
                   <span className="text-sm text-muted-foreground font-normal">
                     /{plan.billingCycle.toLowerCase()}
                   </span>

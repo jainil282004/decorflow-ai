@@ -3,6 +3,7 @@ import { useExecutiveSummary, useFinancialAnalytics } from '../../reports/api/an
 import { useEvents } from '../../events/api/eventsApi';
 import { useInventoryItems } from '../../inventory/api/inventoryApi';
 import { useTasks } from '../../workforce/api/workforceApi';
+import { formatCurrency } from '../../../utils';
 
 function startOfDay(d: Date) {
   const x = new Date(d);
@@ -25,8 +26,9 @@ function isEventActiveToday(startDate: string, endDate: string, today = new Date
 }
 
 function formatRevenueK(value: number) {
-  if (value >= 1000) return `$${(value / 1000).toFixed(1)}k`;
-  return `$${value.toFixed(0)}`;
+  if (value >= 100000) return formatCurrency(value);
+  if (value >= 1000) return `₹${(value / 1000).toFixed(1)}k`;
+  return formatCurrency(value);
 }
 
 export function SummaryKpis() {
@@ -69,7 +71,7 @@ export function SummaryKpis() {
       <KpiCard
         title="Monthly Revenue"
         value={formatRevenueK(currentMonthRevenue)}
-        iconName="DollarSign"
+        iconName="IndianRupee"
         trend={revenueDeltaPct === null ? 'neutral' : revenueDeltaPct >= 0 ? 'up' : 'down'}
         trendValue={
           revenueDeltaPct === null

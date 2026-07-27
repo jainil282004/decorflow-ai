@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { Skeleton } from '../../components/ui/skeleton';
 import { EmptyState } from '../../components/ui/empty-state';
 import { AlertCircle } from 'lucide-react';
+import { formatCurrency } from '../../utils';
 
 export const EventDetailsPage = () => {
   const { id } = useParams();
@@ -189,19 +190,19 @@ export const EventDetailsPage = () => {
           <CardContent className="space-y-2">
             <div>
               <span className="text-sm font-medium text-muted-foreground">Budget</span>
-              <p>{event.budget ? `$${event.budget.toFixed(2)}` : '-'}</p>
+              <p>{event.budget != null ? formatCurrency(event.budget) : '-'}</p>
             </div>
             <div>
               <span className="text-sm font-medium text-muted-foreground">Expected Revenue</span>
-              <p>{event.expectedRevenue ? `$${event.expectedRevenue.toFixed(2)}` : '-'}</p>
+              <p>{event.expectedRevenue != null ? formatCurrency(event.expectedRevenue) : '-'}</p>
             </div>
             <div>
               <span className="text-sm font-medium text-muted-foreground">Total Quoted Amount</span>
-              <p>${event.totalAmount.toFixed(2)}</p>
+              <p>{formatCurrency(event.totalAmount || 0)}</p>
             </div>
             <div>
               <span className="text-sm font-medium text-muted-foreground">Deposit Paid</span>
-              <p>${event.depositAmount.toFixed(2)}</p>
+              <p>{formatCurrency(event.depositAmount || 0)}</p>
             </div>
           </CardContent>
         </Card>

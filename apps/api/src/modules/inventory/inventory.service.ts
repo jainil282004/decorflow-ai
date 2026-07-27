@@ -1,9 +1,5 @@
 import { prisma } from '../../lib/prisma';
-import type {
-  CreateInventoryItemDTO,
-  UpdateInventoryItemDTO,
-  AdjustStockDTO,
-} from '@decorflow/shared';
+import type { CreateInventoryItemDTO, UpdateInventoryItemDTO } from '@decorflow/shared';
 import { ApiError } from '../../utils/errors';
 
 export class InventoryService {
@@ -54,10 +50,14 @@ export class InventoryService {
   }
 
   async create(companyId: string, data: CreateInventoryItemDTO) {
+    const qty = data.currentQuantity ?? 0;
+    const { currentQuantity: _q, ...rest } = data;
     return prisma.inventoryItem.create({
       data: {
         companyId,
-        ...data,
+        ...rest,
+        currentQuantity: qty,
+        availableQuantity: qty,
       },
       include: { category: true, subcategory: true },
     });
@@ -70,9 +70,19 @@ export class InventoryService {
 
     if (!existing) throw new ApiError(404, 'Item not found');
 
+    const { currentQuantity, ...rest } = data;
+    const patch: Record<string, unknown> = { ...rest };
+
+    if (currentQuantity !== undefined) {
+      const reserved = existing.reservedQuantity || 0;
+      const damaged = existing.damagedQuantity || 0;
+      patch.currentQuantity = currentQuantity;
+      patch.availableQuantity = Math.max(0, currentQuantity - reserved - damaged);
+    }
+
     return prisma.inventoryItem.update({
       where: { id },
-      data,
+      data: patch,
       include: { category: true, subcategory: true },
     });
   }
@@ -108,7 +118,9 @@ export class InventoryService {
     variantId: string,
     startDate: Date,
     endDate: Date,
-    requiredQuantity: number
+    requiredQuantity: number,
+    /** When re-checking an existing job, omit its lines from reserved stock. */
+    excludePackingJobId?: string
   ) {
     const variant = await prisma.inventoryVariant.findFirst({
       where: { id: variantId, item: { companyId } },
@@ -162,6 +174,7 @@ export class InventoryService {
           packingJob: {
             eventId: { in: eventIds },
             status: { notIn: ['RETURNED', 'ARCHIVED'] },
+            ...(excludePackingJobId ? { id: { not: excludePackingJobId } } : {}),
           },
         },
         _sum: { expectedQuantity: true },

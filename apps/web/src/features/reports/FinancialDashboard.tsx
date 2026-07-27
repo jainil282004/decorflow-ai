@@ -14,14 +14,9 @@ import {
   Bar,
 } from 'recharts';
 import { Skeleton } from '../../components/ui/skeleton';
+import { formatCurrency } from '../../utils';
 
-export const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0,
-  }).format(value);
-};
+export { formatCurrency };
 
 export const FinancialDashboard = () => {
   const { data: analytics, isLoading } = useFinancialAnalytics();

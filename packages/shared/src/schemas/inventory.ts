@@ -49,6 +49,8 @@ export const CreateInventoryItemSchema = z.object({
   batchNumber: z.string().optional().nullable(),
   unit: z.string().optional().nullable(),
   status: z.string().optional(),
+  /** Total owned stock quantity (also sets available on create). */
+  currentQuantity: optionalInt,
   minStock: optionalInt,
   maxStock: optionalNullableInt,
   bufferHours: optionalNullableInt,
