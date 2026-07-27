@@ -44,7 +44,10 @@ export class InventoryController {
 
   async createItem(req: Request, res: Response, next: NextFunction) {
     try {
-      const data = CreateInventoryItemSchema.parse(req.body);
+      const data = CreateInventoryItemSchema.parse({
+        ...req.body,
+        subcategoryId: req.body?.subcategoryId || null,
+      });
       const item = await inventoryService.create(req.user!.companyId!, data);
       return sendCreated(res, item);
     } catch (error) {
@@ -54,7 +57,11 @@ export class InventoryController {
 
   async updateItem(req: Request, res: Response, next: NextFunction) {
     try {
-      const data = UpdateInventoryItemSchema.parse(req.body);
+      const body = { ...req.body };
+      if ('subcategoryId' in body) {
+        body.subcategoryId = body.subcategoryId || null;
+      }
+      const data = UpdateInventoryItemSchema.parse(body);
       const item = await inventoryService.update(req.user!.companyId!, req.params.id, data);
       return sendSuccess(res, item);
     } catch (error) {

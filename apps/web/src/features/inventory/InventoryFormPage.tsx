@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CreateInventoryItemSchema } from '@decorflow/shared';
+import { z } from 'zod';
 import type { CreateInventoryItemDTO } from '@decorflow/shared';
 import {
   useInventoryItem,
@@ -23,10 +23,80 @@ import {
 } from '../../components/ui/form';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Checkbox } from '../../components/ui/checkbox';
+import { useToast } from '../../hooks/use-toast';
+
+const selectClassName =
+  'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50';
+
+type CategoryOption = { id: string; name: string; parentId?: string | null };
+
+/** Form-friendly schema: empty subcategory / prices allowed while typing. */
+const InventoryFormSchema = z.object({
+  categoryId: z.string().min(1, 'Select a category'),
+  subcategoryId: z.string().optional().nullable(),
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  sku: z.string().min(2, 'SKU is required'),
+  description: z.string().optional().nullable(),
+  purchasePrice: z.union([z.number().nonnegative(), z.nan()]).optional().nullable(),
+  rentalPrice: z.union([z.number().nonnegative(), z.nan()]).optional().nullable(),
+  replacementCost: z.union([z.number().nonnegative(), z.nan()]).optional().nullable(),
+  barcode: z.string().optional().nullable(),
+  qrCode: z.string().optional().nullable(),
+  serialNumber: z.string().optional().nullable(),
+  batchNumber: z.string().optional().nullable(),
+  unit: z.string().optional().nullable(),
+  minStock: z.union([z.number().int().nonnegative(), z.nan()]).optional().nullable(),
+  maxStock: z.union([z.number().int().nonnegative(), z.nan()]).optional().nullable(),
+  bufferHours: z.union([z.number().int().nonnegative(), z.nan()]).optional().nullable(),
+  notes: z.string().optional().nullable(),
+  requiresCleaning: z.boolean().optional(),
+});
+
+type InventoryFormValues = z.infer<typeof InventoryFormSchema>;
+
+function parseOptionalNumber(raw: string): number | undefined {
+  if (raw === '') return undefined;
+  const n = parseFloat(raw);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function parseOptionalInt(raw: string): number | undefined {
+  if (raw === '') return undefined;
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function toPayload(values: InventoryFormValues): CreateInventoryItemDTO {
+  // Build payload without client-side UUID re-validation (that caused the "Invalid uuid" popup).
+  const subcategoryId = values.subcategoryId?.trim() ? values.subcategoryId.trim() : null;
+  const amount = (n: number | null | undefined) => (n == null || Number.isNaN(n) ? undefined : n);
+
+  return {
+    categoryId: values.categoryId,
+    subcategoryId,
+    name: values.name,
+    sku: values.sku,
+    description: values.description || null,
+    purchasePrice: amount(values.purchasePrice),
+    rentalPrice: amount(values.rentalPrice),
+    replacementCost: amount(values.replacementCost),
+    barcode: values.barcode || null,
+    qrCode: values.qrCode || null,
+    serialNumber: values.serialNumber || null,
+    batchNumber: values.batchNumber || null,
+    unit: values.unit || null,
+    minStock: amount(values.minStock) as number | undefined,
+    maxStock: values.maxStock == null || Number.isNaN(values.maxStock) ? null : values.maxStock,
+    bufferHours: amount(values.bufferHours) as number | undefined,
+    notes: values.notes || null,
+    requiresCleaning: values.requiresCleaning ?? false,
+  };
+}
 
 export const InventoryFormPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const isEditing = !!id;
 
   const { data, isLoading } = useInventoryItem(id as string);
@@ -34,29 +104,37 @@ export const InventoryFormPage = () => {
   const createMutation = useCreateInventoryItem();
   const updateMutation = useUpdateInventoryItem();
 
-  const form = useForm<CreateInventoryItemDTO>({
-    resolver: zodResolver(CreateInventoryItemSchema),
+  const form = useForm<InventoryFormValues>({
+    resolver: zodResolver(InventoryFormSchema),
     defaultValues: {
       categoryId: '',
       subcategoryId: '',
       name: '',
       sku: '',
       description: '',
-      purchasePrice: 0,
-      rentalPrice: 0,
-      replacementCost: 0,
+      purchasePrice: undefined,
+      rentalPrice: undefined,
+      replacementCost: undefined,
       barcode: '',
       qrCode: '',
       serialNumber: '',
       batchNumber: '',
       unit: 'pcs',
-      minStock: 0,
+      minStock: undefined,
       maxStock: null,
-      bufferHours: 0,
+      bufferHours: undefined,
       notes: '',
       requiresCleaning: false,
     },
   });
+
+  const selectedCategoryId = useWatch({ control: form.control, name: 'categoryId' });
+  const allCategories = (categories ?? []) as CategoryOption[];
+  const hasHierarchy = allCategories.some((c) => !!c.parentId);
+  const parentCategories = hasHierarchy ? allCategories.filter((c) => !c.parentId) : allCategories;
+  const subcategories = hasHierarchy
+    ? allCategories.filter((c) => c.parentId === selectedCategoryId)
+    : [];
 
   useEffect(() => {
     if (data?.data) {
@@ -77,23 +155,47 @@ export const InventoryFormPage = () => {
         unit: item.unit || 'pcs',
         minStock: item.minStock,
         maxStock: item.maxStock,
-        bufferHours: item.bufferHours || 0,
+        bufferHours: item.bufferHours ?? undefined,
         notes: item.notes || '',
         requiresCleaning: item.requiresCleaning ?? false,
       });
     }
   }, [data, form]);
 
-  const onSubmit = async (values: CreateInventoryItemDTO) => {
+  useEffect(() => {
+    const current = form.getValues('subcategoryId');
+    if (!current) return;
+    if (!subcategories.some((c) => c.id === current)) {
+      form.setValue('subcategoryId', '');
+    }
+  }, [selectedCategoryId, subcategories, form]);
+
+  const onSubmit = async (values: InventoryFormValues) => {
+    const payload = toPayload(values);
+
     try {
       if (isEditing) {
-        await updateMutation.mutateAsync({ id, payload: values });
+        await updateMutation.mutateAsync({ id, payload });
+        toast({ title: 'Item updated' });
       } else {
-        await createMutation.mutateAsync(values);
+        await createMutation.mutateAsync(payload);
+        toast({ title: 'Item created' });
       }
       navigate('/inventory');
-    } catch (error) {
-      console.error('Failed to save inventory item', error);
+    } catch (err: any) {
+      const apiMsg =
+        err?.response?.data?.error?.message ||
+        err?.response?.data?.message ||
+        (Array.isArray(err?.response?.data?.error?.details)
+          ? err.response.data.error.details
+              .map((d: { message?: string }) => d.message)
+              .filter(Boolean)
+              .join(', ')
+          : null);
+      toast({
+        title: apiMsg || 'Could not save catalog item',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -122,7 +224,6 @@ export const InventoryFormPage = () => {
       <Form {...form}>
         <form className="space-y-8" onSubmit={form.handleSubmit(onSubmit)}>
           <div className="grid gap-4 md:grid-cols-2">
-            {/* Identity Info */}
             <Card>
               <CardHeader>
                 <CardTitle>Identity & Categories</CardTitle>
@@ -178,12 +279,9 @@ export const InventoryFormPage = () => {
                     <FormItem>
                       <FormLabel>Category</FormLabel>
                       <FormControl>
-                        <select
-                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                          {...field}
-                        >
+                        <select className={selectClassName} {...field}>
                           <option value="">Select a category...</option>
-                          {categories?.map((c: any) => (
+                          {parentCategories.map((c) => (
                             <option key={c.id} value={c.id}>
                               {c.name}
                             </option>
@@ -202,12 +300,26 @@ export const InventoryFormPage = () => {
                     <FormItem>
                       <FormLabel>Subcategory (Optional)</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="Optional subcategory UUID"
-                          {...field}
+                        <select
+                          className={selectClassName}
                           value={field.value || ''}
-                        />
+                          onChange={(e) => field.onChange(e.target.value)}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                          disabled={!selectedCategoryId || !hasHierarchy}
+                        >
+                          <option value="">None</option>
+                          {subcategories.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
                       </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        Leave as None if you do not use subcategories.
+                      </p>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -215,7 +327,6 @@ export const InventoryFormPage = () => {
               </CardContent>
             </Card>
 
-            {/* Pricing Info */}
             <Card>
               <CardHeader>
                 <CardTitle>Financials</CardTitle>
@@ -232,10 +343,13 @@ export const InventoryFormPage = () => {
                           <Input
                             type="number"
                             step="0.01"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(e.target.value ? parseFloat(e.target.value) : 0)
-                            }
+                            min={0}
+                            placeholder="Optional"
+                            value={field.value ?? ''}
+                            onChange={(e) => field.onChange(parseOptionalNumber(e.target.value))}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
                           />
                         </FormControl>
                         <FormMessage />
@@ -252,10 +366,13 @@ export const InventoryFormPage = () => {
                           <Input
                             type="number"
                             step="0.01"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(e.target.value ? parseFloat(e.target.value) : 0)
-                            }
+                            min={0}
+                            placeholder="Optional"
+                            value={field.value ?? ''}
+                            onChange={(e) => field.onChange(parseOptionalNumber(e.target.value))}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
                           />
                         </FormControl>
                         <FormMessage />
@@ -272,10 +389,13 @@ export const InventoryFormPage = () => {
                           <Input
                             type="number"
                             step="0.01"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(e.target.value ? parseFloat(e.target.value) : 0)
-                            }
+                            min={0}
+                            placeholder="Optional"
+                            value={field.value ?? ''}
+                            onChange={(e) => field.onChange(parseOptionalNumber(e.target.value))}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
                           />
                         </FormControl>
                         <FormMessage />
@@ -286,7 +406,6 @@ export const InventoryFormPage = () => {
               </CardContent>
             </Card>
 
-            {/* Tracking Codes */}
             <Card>
               <CardHeader>
                 <CardTitle>Tracking & Barcodes</CardTitle>
@@ -349,7 +468,6 @@ export const InventoryFormPage = () => {
               </CardContent>
             </Card>
 
-            {/* Stock Metrics Info */}
             <Card>
               <CardHeader>
                 <CardTitle>Stock Control Limits</CardTitle>
@@ -365,10 +483,13 @@ export const InventoryFormPage = () => {
                         <FormControl>
                           <Input
                             type="number"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(e.target.value ? parseInt(e.target.value) : 0)
-                            }
+                            min={0}
+                            placeholder="Optional"
+                            value={field.value ?? ''}
+                            onChange={(e) => field.onChange(parseOptionalInt(e.target.value))}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
                           />
                         </FormControl>
                         <FormMessage />
@@ -384,11 +505,16 @@ export const InventoryFormPage = () => {
                         <FormControl>
                           <Input
                             type="number"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(e.target.value ? parseInt(e.target.value) : null)
-                            }
-                            value={field.value || ''}
+                            min={0}
+                            placeholder="Optional"
+                            value={field.value ?? ''}
+                            onChange={(e) => {
+                              const n = parseOptionalInt(e.target.value);
+                              field.onChange(n === undefined ? null : n);
+                            }}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
                           />
                         </FormControl>
                         <FormMessage />
@@ -404,12 +530,13 @@ export const InventoryFormPage = () => {
                         <FormControl>
                           <Input
                             type="number"
+                            min={0}
                             placeholder="e.g. 12"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(e.target.value ? parseInt(e.target.value) : 0)
-                            }
                             value={field.value ?? ''}
+                            onChange={(e) => field.onChange(parseOptionalInt(e.target.value))}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
                           />
                         </FormControl>
                         <p className="text-xs text-muted-foreground mt-1">

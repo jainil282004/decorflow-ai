@@ -1,23 +1,57 @@
 import { z } from 'zod';
 
+/**
+ * Optional FK id. Empty string / null → null.
+ * Do NOT use .uuid() here — empty optional fields must never show "Invalid uuid".
+ * Leave undefined unset (important for PATCH).
+ */
+const optionalFkId = z.preprocess((v) => {
+  if (v === undefined) return undefined;
+  if (v === '' || v === null) return null;
+  if (typeof v === 'string' && v.trim() === '') return null;
+  return typeof v === 'string' ? v.trim() : v;
+}, z.string().min(1).nullable().optional());
+
+/** Accept number / numeric string / empty → number | undefined (clearable money fields). */
+const optionalAmount = z.preprocess((v) => {
+  if (v === undefined) return undefined;
+  if (v === '' || v === null) return undefined;
+  if (typeof v === 'number' && Number.isNaN(v)) return undefined;
+  return v;
+}, z.coerce.number().nonnegative().optional());
+
+const optionalInt = z.preprocess((v) => {
+  if (v === undefined) return undefined;
+  if (v === '' || v === null) return undefined;
+  if (typeof v === 'number' && Number.isNaN(v)) return undefined;
+  return v;
+}, z.coerce.number().int().nonnegative().optional());
+
+const optionalNullableInt = z.preprocess((v) => {
+  if (v === undefined) return undefined;
+  if (v === '' || v === null) return null;
+  if (typeof v === 'number' && Number.isNaN(v)) return null;
+  return v;
+}, z.coerce.number().int().nonnegative().nullable().optional());
+
 export const CreateInventoryItemSchema = z.object({
-  categoryId: z.string().uuid(),
-  subcategoryId: z.string().uuid().optional().nullable(),
+  categoryId: z.string().uuid('Select a category'),
+  subcategoryId: optionalFkId,
   name: z.string().min(2, 'Name must be at least 2 characters'),
   sku: z.string().min(2, 'SKU is required'),
   description: z.string().optional().nullable(),
-  purchasePrice: z.number().nonnegative().optional(),
-  rentalPrice: z.number().nonnegative().optional(),
-  replacementCost: z.number().nonnegative().optional(),
+  purchasePrice: optionalAmount,
+  rentalPrice: optionalAmount,
+  replacementCost: optionalAmount,
   barcode: z.string().optional().nullable(),
   qrCode: z.string().optional().nullable(),
   serialNumber: z.string().optional().nullable(),
   batchNumber: z.string().optional().nullable(),
   unit: z.string().optional().nullable(),
   status: z.string().optional(),
-  minStock: z.number().int().nonnegative().optional(),
-  maxStock: z.number().int().nonnegative().optional().nullable(),
-  bufferHours: z.number().int().nonnegative().optional().nullable(),
+  minStock: optionalInt,
+  maxStock: optionalNullableInt,
+  bufferHours: optionalNullableInt,
   notes: z.string().optional().nullable(),
   isTracked: z.boolean().optional(),
   isActive: z.boolean().optional(),
