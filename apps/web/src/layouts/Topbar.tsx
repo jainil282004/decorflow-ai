@@ -15,6 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { useAuthStore } from '../stores/authStore';
 import { navigationConfig } from '../config/navigation';
+import { apiClient } from '../lib/axios';
 
 interface TopbarProps {
   setMobileOpen: (open: boolean) => void;
@@ -32,9 +33,15 @@ export function Topbar({ setMobileOpen }: TopbarProps) {
   const navigate = useNavigate();
   const { user, clearAuth } = useAuthStore();
 
-  const handleLogout = () => {
-    clearAuth();
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      await apiClient.post('/auth/logout');
+    } catch (e) {
+      console.error(e);
+    } finally {
+      clearAuth();
+      navigate('/login');
+    }
   };
 
   // Generate basic breadcrumb text based on current route
