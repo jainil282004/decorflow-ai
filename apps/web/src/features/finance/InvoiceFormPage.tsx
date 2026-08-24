@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,7 +16,7 @@ import {
   FormLabel,
   FormMessage,
 } from '../../components/ui/form';
-import { useCreateInvoice } from '../finance/api/financeApi';
+import { useCreateInvoice, useQuotations, useQuotation } from '../finance/api/financeApi';
 import { useCustomers } from '../customers/api/customersApi';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
@@ -56,10 +57,31 @@ export const InvoiceFormPage = () => {
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
     name: 'items',
   });
+
+  const { data: quotations } = useQuotations();
+  const approvedQuotations = (quotations ?? []).filter(
+    (q: any) => q.status === 'APPROVED' || q.status === 'SENT'
+  );
+  const [selectedQuotationId, setSelectedQuotationId] = useState('');
+  const { data: selectedQuotation } = useQuotation(selectedQuotationId);
+
+  useEffect(() => {
+    if (!selectedQuotation) return;
+    form.setValue('customerId', selectedQuotation.customerId);
+    form.setValue('discountTotal', selectedQuotation.discountTotal ?? 0);
+    replace(
+      selectedQuotation.items.map((item: any) => ({
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+      }))
+    );
+    toast({ title: `Filled in from quotation ${selectedQuotation.number}` });
+  }, [selectedQuotation]);
 
   const watchedItems = form.watch('items');
   const subtotal = watchedItems.reduce((acc, item) => acc + item.quantity * item.unitPrice, 0);
@@ -77,6 +99,7 @@ export const InvoiceFormPage = () => {
       taxAmount: tax,
       totalAmount: total,
       discountTotal: data.discountTotal || 0,
+      quotationId: selectedQuotationId || undefined,
       items: data.items.map((i: any) => ({
         ...i,
         taxRate: applyTax ? DEFAULT_TAX_RATE_PERCENT : 0,
@@ -95,6 +118,33 @@ export const InvoiceFormPage = () => {
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <PageHeader title="New Invoice" description="Create a new invoice for a client" />
+
+      {approvedQuotations.length > 0 && (
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <div className="space-y-2">
+              <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Fill in from an existing quotation
+              </label>
+              <select
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                value={selectedQuotationId}
+                onChange={(e) => setSelectedQuotationId(e.target.value)}
+              >
+                <option value="">Start blank...</option>
+                {approvedQuotations.map((q: any) => (
+                  <option key={q.id} value={q.id}>
+                    {q.number} — {q.customer?.name} (₹{q.totalAmount?.toFixed(2)})
+                  </option>
+                ))}
+              </select>
+              <p className="text-[0.8rem] text-muted-foreground">
+                Picking a quotation fills the form below. You can still edit anything before saving.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
