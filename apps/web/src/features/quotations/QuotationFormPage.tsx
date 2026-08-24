@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { Checkbox } from '../../components/ui/checkbox';
 import { PageHeader } from '../../components/PageHeader';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -32,6 +33,8 @@ const quotationFormSchema = z.object({
   validUntil: z.string().min(1, 'Required'),
   notes: z.string().optional(),
   items: z.array(itemSchema).min(1, 'At least one item required'),
+  discountTotal: z.coerce.number().min(0).optional(),
+  applyTax: z.boolean(),
 });
 
 export const QuotationFormPage = () => {
@@ -48,6 +51,8 @@ export const QuotationFormPage = () => {
       date: new Date().toISOString().split('T')[0],
       validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       items: [{ description: '', quantity: 1, unitPrice: 0 }],
+      discountTotal: 0,
+      applyTax: true,
     },
   });
 
@@ -58,8 +63,10 @@ export const QuotationFormPage = () => {
 
   const watchedItems = form.watch('items');
   const subtotal = watchedItems.reduce((acc, item) => acc + item.quantity * item.unitPrice, 0);
-  const tax = subtotal * DEFAULT_TAX_RATE;
-  const total = subtotal + tax;
+  const applyTax = form.watch('applyTax');
+  const discountTotal = form.watch('discountTotal') || 0;
+  const tax = applyTax ? subtotal * (DEFAULT_TAX_RATE_PERCENT / 100) : 0;
+  const total = Math.max(0, subtotal + tax - discountTotal);
 
   const onSubmit = (data: any) => {
     const payload = {
@@ -69,9 +76,10 @@ export const QuotationFormPage = () => {
       subtotalAmount: subtotal,
       taxAmount: tax,
       totalAmount: total,
+      discountTotal: data.discountTotal || 0,
       items: data.items.map((i: any) => ({
         ...i,
-        taxRate: DEFAULT_TAX_RATE_PERCENT,
+        taxRate: applyTax ? DEFAULT_TAX_RATE_PERCENT : 0,
         totalPrice: i.quantity * i.unitPrice,
       })),
     };
@@ -226,14 +234,61 @@ export const QuotationFormPage = () => {
 
               <div className="border-t pt-4 flex justify-end">
                 <div className="w-64 space-y-2 text-sm">
+                  <FormField
+                    control={form.control}
+                    name="applyTax"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-2">
+                        <FormControl>
+                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Apply tax (18%)</FormLabel>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="discountTotal"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <FormLabel className="text-muted-foreground font-normal">
+                          Discount (₹)
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="0"
+                            className="w-24 h-8 text-right"
+                            {...field}
+                            onChange={(e) =>
+                              field.onChange(e.target.value ? parseFloat(e.target.value) : 0)
+                            }
+                            value={field.value || ''}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Subtotal</span>
                     <span>₹{subtotal.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Tax ({DEFAULT_TAX_RATE_PERCENT}%)</span>
-                    <span>₹{tax.toFixed(2)}</span>
-                  </div>
+                  {applyTax && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        Tax ({DEFAULT_TAX_RATE_PERCENT}%)
+                      </span>
+                      <span>₹{tax.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {discountTotal > 0 && (
+                    <div className="flex justify-between text-success">
+                      <span className="text-muted-foreground">Discount</span>
+                      <span>-₹{discountTotal.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-bold text-lg pt-2 border-t">
                     <span>Total</span>
                     <span>₹{total.toFixed(2)}</span>
