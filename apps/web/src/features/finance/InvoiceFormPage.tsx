@@ -20,7 +20,7 @@ import { useCreateInvoice, useQuotations, useQuotation } from '../finance/api/fi
 import { useCustomers } from '../customers/api/customersApi';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
-import { DEFAULT_TAX_RATE, DEFAULT_TAX_RATE_PERCENT } from '../../config/tax';
+import { DEFAULT_TAX_RATE_PERCENT } from '../../config/tax';
 
 const itemSchema = z.object({
   description: z.string().min(1, 'Required'),
