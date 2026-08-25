@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { ErrorBoundary } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -34,6 +35,22 @@ const tripSchema = z.object({
 type TripFormValues = z.infer<typeof tripSchema>;
 
 export const TripFormPage = () => {
+  return (
+    <ErrorBoundary
+      fallbackRender={({ error }) => (
+        <div className="p-8 text-red-500">
+          <h1>ERROR IN TRIPFORMPAGE</h1>
+          <pre>{error.message}</pre>
+          <pre>{error.stack}</pre>
+        </div>
+      )}
+    >
+      <TripFormPageInner />
+    </ErrorBoundary>
+  );
+};
+
+const TripFormPageInner = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const createMutation = useCreateTrip();
