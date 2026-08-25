@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -19,7 +19,6 @@ import { useCreateTrip, useVehicles, useDrivers } from './api/logisticsApi';
 import { useEvents } from '../events/api/eventsApi';
 import { useToast } from '../../hooks/use-toast';
 import { Loader2, ExternalLink, MapPin } from 'lucide-react';
-import { useDebounce } from '../../hooks/use-debounce'; // Assuming this exists or I'll add a simple effect
 
 const tripSchema = z.object({
   eventId: z.string().min(1, 'Event is required'),
@@ -39,9 +38,10 @@ export const TripFormPage = () => {
   const { toast } = useToast();
   const createMutation = useCreateTrip();
 
-  const { data: events, isLoading: eventsLoading } = useEvents();
-  const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
-  const { data: drivers, isLoading: driversLoading } = useDrivers();
+  const { data: eventsResponse } = useEvents(1, 100, '');
+  const events = eventsResponse?.data || [];
+  const { data: vehicles } = useVehicles();
+  const { data: drivers } = useDrivers();
 
   const form = useForm<TripFormValues>({
     resolver: zodResolver(tripSchema),
