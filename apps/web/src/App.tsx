@@ -203,6 +203,8 @@ const ComingSoonPage = React.lazy(() =>
   import('./features/errors/ComingSoonPage').then((m) => ({ default: m.ComingSoonPage }))
 );
 
+import { ErrorBoundary as GlobalErrorBoundary } from './components/ui/error-boundary';
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -221,489 +223,491 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light" storageKey="decorflow-theme">
-        <BrowserRouter>
-          <Routes>
-            <Route element={<AuthLayout />}>
-              <Route
-                path="/login"
-                element={
-                  <PageSuspense>
-                    <LoginPage />
-                  </PageSuspense>
-                }
-              />
-              <Route
-                path="/forgot-password"
-                element={
-                  <PageSuspense>
-                    <ForgotPasswordPage />
-                  </PageSuspense>
-                }
-              />
-              <Route
-                path="/reset-password"
-                element={
-                  <PageSuspense>
-                    <ResetPasswordPage />
-                  </PageSuspense>
-                }
-              />
-              <Route
-                path="/unauthorized"
-                element={
-                  <PageSuspense>
-                    <UnauthorizedPage />
-                  </PageSuspense>
-                }
-              />
-            </Route>
+        <GlobalErrorBoundary variant="global">
+          <BrowserRouter>
+            <Routes>
+              <Route element={<AuthLayout />}>
+                <Route
+                  path="/login"
+                  element={
+                    <PageSuspense>
+                      <LoginPage />
+                    </PageSuspense>
+                  }
+                />
+                <Route
+                  path="/forgot-password"
+                  element={
+                    <PageSuspense>
+                      <ForgotPasswordPage />
+                    </PageSuspense>
+                  }
+                />
+                <Route
+                  path="/reset-password"
+                  element={
+                    <PageSuspense>
+                      <ResetPasswordPage />
+                    </PageSuspense>
+                  }
+                />
+                <Route
+                  path="/unauthorized"
+                  element={
+                    <PageSuspense>
+                      <UnauthorizedPage />
+                    </PageSuspense>
+                  }
+                />
+              </Route>
 
-            {/* Protected Routes */}
-            <Route element={<ProtectedRoute />}>
-              <Route element={<AppShell />}>
-                <Route element={<PermissionRoute />}>
-                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                  <Route
-                    path="/profile"
-                    element={
-                      <PageSuspense>
-                        <ProfilePage />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/dashboard"
-                    element={
-                      <PageSuspense>
-                        <DashboardPage />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/dashboard/notifications"
-                    element={
-                      <PageSuspense>
-                        <NotificationCenter />
-                      </PageSuspense>
-                    }
-                  />
+              {/* Protected Routes */}
+              <Route element={<ProtectedRoute />}>
+                <Route element={<AppShell />}>
+                  <Route element={<PermissionRoute />}>
+                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                    <Route
+                      path="/profile"
+                      element={
+                        <PageSuspense>
+                          <ProfilePage />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/dashboard"
+                      element={
+                        <PageSuspense>
+                          <DashboardPage />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/dashboard/notifications"
+                      element={
+                        <PageSuspense>
+                          <NotificationCenter />
+                        </PageSuspense>
+                      }
+                    />
 
-                  {/* Finance */}
-                  <Route
-                    path="/finance"
-                    element={
-                      <PageSuspense>
-                        <FinanceDashboard />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/finance/invoices"
-                    element={
-                      <PageSuspense>
-                        <InvoiceDashboard />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/finance/invoices/new"
-                    element={
-                      <PageSuspense>
-                        <InvoiceFormPage />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/finance/invoices/:id"
-                    element={
-                      <PageSuspense>
-                        <InvoiceDetailsPage />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/finance/payables"
-                    element={
-                      <PageSuspense>
-                        <PayablesDashboard />
-                      </PageSuspense>
-                    }
-                  />
+                    {/* Finance */}
+                    <Route
+                      path="/finance"
+                      element={
+                        <PageSuspense>
+                          <FinanceDashboard />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/finance/invoices"
+                      element={
+                        <PageSuspense>
+                          <InvoiceDashboard />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/finance/invoices/new"
+                      element={
+                        <PageSuspense>
+                          <InvoiceFormPage />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/finance/invoices/:id"
+                      element={
+                        <PageSuspense>
+                          <InvoiceDetailsPage />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/finance/payables"
+                      element={
+                        <PageSuspense>
+                          <PayablesDashboard />
+                        </PageSuspense>
+                      }
+                    />
 
-                  {/* Quotations */}
-                  <Route
-                    path="/finance/quotations"
-                    element={
-                      <PageSuspense>
-                        <QuotationListPage />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/finance/quotations/new"
-                    element={
-                      <PageSuspense>
-                        <QuotationFormPage />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/finance/quotations/:id"
-                    element={
-                      <PageSuspense>
-                        <QuotationDetailsPage />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/finance/quotations/:id/edit"
-                    element={
-                      <PageSuspense>
-                        <QuotationFormPage />
-                      </PageSuspense>
-                    }
-                  />
+                    {/* Quotations */}
+                    <Route
+                      path="/finance/quotations"
+                      element={
+                        <PageSuspense>
+                          <QuotationListPage />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/finance/quotations/new"
+                      element={
+                        <PageSuspense>
+                          <QuotationFormPage />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/finance/quotations/:id"
+                      element={
+                        <PageSuspense>
+                          <QuotationDetailsPage />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/finance/quotations/:id/edit"
+                      element={
+                        <PageSuspense>
+                          <QuotationFormPage />
+                        </PageSuspense>
+                      }
+                    />
 
-                  {/* Reports & Analytics */}
-                  <Route
-                    path="/reports"
-                    element={
-                      <PageSuspense>
-                        <ExecutiveDashboard />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/reports/financial"
-                    element={
-                      <PageSuspense>
-                        <FinancialDashboard />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/reports/inventory"
-                    element={
-                      <PageSuspense>
-                        <InventoryAnalyticsDashboard />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/reports/builder"
-                    element={
-                      <PageSuspense>
-                        <ReportBuilder />
-                      </PageSuspense>
-                    }
-                  />
+                    {/* Reports & Analytics */}
+                    <Route
+                      path="/reports"
+                      element={
+                        <PageSuspense>
+                          <ExecutiveDashboard />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/reports/financial"
+                      element={
+                        <PageSuspense>
+                          <FinancialDashboard />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/reports/inventory"
+                      element={
+                        <PageSuspense>
+                          <InventoryAnalyticsDashboard />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/reports/builder"
+                      element={
+                        <PageSuspense>
+                          <ReportBuilder />
+                        </PageSuspense>
+                      }
+                    />
 
-                  {/* SaaS & Settings */}
-                  <Route
-                    path="/settings/organization"
-                    element={
-                      <PageSuspense>
-                        <OrganizationSettings />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/settings/users"
-                    element={
-                      <PageSuspense>
-                        <UserDirectory />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/settings/subscription"
-                    element={
-                      <PageSuspense>
-                        <SubscriptionManager />
-                      </PageSuspense>
-                    }
-                  />
+                    {/* SaaS & Settings */}
+                    <Route
+                      path="/settings/organization"
+                      element={
+                        <PageSuspense>
+                          <OrganizationSettings />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/settings/users"
+                      element={
+                        <PageSuspense>
+                          <UserDirectory />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/settings/subscription"
+                      element={
+                        <PageSuspense>
+                          <SubscriptionManager />
+                        </PageSuspense>
+                      }
+                    />
 
-                  {/* Super Admin */}
-                  <Route
-                    path="/admin/platform"
-                    element={
-                      <PageSuspense>
-                        <PlatformAdminDashboard />
-                      </PageSuspense>
-                    }
-                  />
+                    {/* Super Admin */}
+                    <Route
+                      path="/admin/platform"
+                      element={
+                        <PageSuspense>
+                          <PlatformAdminDashboard />
+                        </PageSuspense>
+                      }
+                    />
 
-                  {/* Events Module */}
-                  <Route
-                    path="/events"
-                    element={
-                      <PageSuspense>
-                        <EventListPage />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/events/new"
-                    element={
-                      <PageSuspense>
-                        <EventFormPage />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/events/:id"
-                    element={
-                      <PageSuspense>
-                        <EventDetailsPage />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/events/:id/edit"
-                    element={
-                      <PageSuspense>
-                        <EventFormPage />
-                      </PageSuspense>
-                    }
-                  />
+                    {/* Events Module */}
+                    <Route
+                      path="/events"
+                      element={
+                        <PageSuspense>
+                          <EventListPage />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/events/new"
+                      element={
+                        <PageSuspense>
+                          <EventFormPage />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/events/:id"
+                      element={
+                        <PageSuspense>
+                          <EventDetailsPage />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/events/:id/edit"
+                      element={
+                        <PageSuspense>
+                          <EventFormPage />
+                        </PageSuspense>
+                      }
+                    />
 
-                  {/* Customers CRM */}
-                  <Route
-                    path="/customers"
-                    element={
-                      <PageSuspense>
-                        <CustomerListPage />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/customers/new"
-                    element={
-                      <PageSuspense>
-                        <CustomerFormPage />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/customers/:id"
-                    element={
-                      <PageSuspense>
-                        <CustomerDetailsPage />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/customers/:id/edit"
-                    element={
-                      <PageSuspense>
-                        <CustomerFormPage />
-                      </PageSuspense>
-                    }
-                  />
+                    {/* Customers CRM */}
+                    <Route
+                      path="/customers"
+                      element={
+                        <PageSuspense>
+                          <CustomerListPage />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/customers/new"
+                      element={
+                        <PageSuspense>
+                          <CustomerFormPage />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/customers/:id"
+                      element={
+                        <PageSuspense>
+                          <CustomerDetailsPage />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/customers/:id/edit"
+                      element={
+                        <PageSuspense>
+                          <CustomerFormPage />
+                        </PageSuspense>
+                      }
+                    />
 
-                  {/* Inventory Module */}
-                  <Route
-                    path="/inventory"
-                    element={
-                      <PageSuspense>
-                        <InventoryListPage />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/inventory/new"
-                    element={
-                      <PageSuspense>
-                        <InventoryFormPage />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/inventory/:id"
-                    element={
-                      <PageSuspense>
-                        <InventoryDetailsPage />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/inventory/:id/edit"
-                    element={
-                      <PageSuspense>
-                        <InventoryFormPage />
-                      </PageSuspense>
-                    }
-                  />
+                    {/* Inventory Module */}
+                    <Route
+                      path="/inventory"
+                      element={
+                        <PageSuspense>
+                          <InventoryListPage />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/inventory/new"
+                      element={
+                        <PageSuspense>
+                          <InventoryFormPage />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/inventory/:id"
+                      element={
+                        <PageSuspense>
+                          <InventoryDetailsPage />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/inventory/:id/edit"
+                      element={
+                        <PageSuspense>
+                          <InventoryFormPage />
+                        </PageSuspense>
+                      }
+                    />
 
-                  {/* Additional Sidebar Routes (Placeholders) */}
-                  <Route
-                    path="/warehouse"
-                    element={
-                      <PageSuspense>
-                        <ComingSoonPage />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/inventory/reservations"
-                    element={
-                      <PageSuspense>
-                        <ComingSoonPage />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/cleaning"
-                    element={
-                      <PageSuspense>
-                        <CleaningDashboard />
-                      </PageSuspense>
-                    }
-                  />
+                    {/* Additional Sidebar Routes (Placeholders) */}
+                    <Route
+                      path="/warehouse"
+                      element={
+                        <PageSuspense>
+                          <ComingSoonPage />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/inventory/reservations"
+                      element={
+                        <PageSuspense>
+                          <ComingSoonPage />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/cleaning"
+                      element={
+                        <PageSuspense>
+                          <CleaningDashboard />
+                        </PageSuspense>
+                      }
+                    />
 
-                  {/* Warehouse Operations */}
-                  <Route
-                    path="/packing"
-                    element={
-                      <PageSuspense>
-                        <PackingDashboard />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/packing/new"
-                    element={
-                      <PageSuspense>
-                        <PackingFormPage />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/packing/:id"
-                    element={
-                      <PageSuspense>
-                        <PackingDetailsPage />
-                      </PageSuspense>
-                    }
-                  />
+                    {/* Warehouse Operations */}
+                    <Route
+                      path="/packing"
+                      element={
+                        <PageSuspense>
+                          <PackingDashboard />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/packing/new"
+                      element={
+                        <PageSuspense>
+                          <PackingFormPage />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/packing/:id"
+                      element={
+                        <PageSuspense>
+                          <PackingDetailsPage />
+                        </PageSuspense>
+                      }
+                    />
 
-                  {/* Logistics & Fleet */}
-                  <Route
-                    path="/fleet"
-                    element={
-                      <PageSuspense>
-                        <FleetDashboard />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/fleet/vehicles/new"
-                    element={
-                      <PageSuspense>
-                        <VehicleFormPage />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/fleet/trips/new"
-                    element={
-                      <PageSuspense>
-                        <TripFormPage />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/fleet/trips/:id"
-                    element={
-                      <PageSuspense>
-                        <TripDetailsPage />
-                      </PageSuspense>
-                    }
-                  />
+                    {/* Logistics & Fleet */}
+                    <Route
+                      path="/fleet"
+                      element={
+                        <PageSuspense>
+                          <FleetDashboard />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/fleet/vehicles/new"
+                      element={
+                        <PageSuspense>
+                          <VehicleFormPage />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/fleet/trips/new"
+                      element={
+                        <PageSuspense>
+                          <TripFormPage />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/fleet/trips/:id"
+                      element={
+                        <PageSuspense>
+                          <TripDetailsPage />
+                        </PageSuspense>
+                      }
+                    />
 
-                  {/* Workforce & Tasks */}
-                  <Route
-                    path="/workforce"
-                    element={
-                      <PageSuspense>
-                        <WorkforceDashboard />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/workforce/employees/new"
-                    element={
-                      <PageSuspense>
-                        <EmployeeFormPage />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/workforce/teams/new"
-                    element={
-                      <PageSuspense>
-                        <TeamFormPage />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/tasks"
-                    element={
-                      <PageSuspense>
-                        <TaskBoard />
-                      </PageSuspense>
-                    }
-                  />
+                    {/* Workforce & Tasks */}
+                    <Route
+                      path="/workforce"
+                      element={
+                        <PageSuspense>
+                          <WorkforceDashboard />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/workforce/employees/new"
+                      element={
+                        <PageSuspense>
+                          <EmployeeFormPage />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/workforce/teams/new"
+                      element={
+                        <PageSuspense>
+                          <TeamFormPage />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/tasks"
+                      element={
+                        <PageSuspense>
+                          <TaskBoard />
+                        </PageSuspense>
+                      }
+                    />
 
-                  {/* Procurement */}
-                  <Route
-                    path="/procurement"
-                    element={
-                      <PageSuspense>
-                        <ProcurementDashboard />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/procurement/vendors/:id"
-                    element={
-                      <PageSuspense>
-                        <VendorProfilePage />
-                      </PageSuspense>
-                    }
-                  />
+                    {/* Procurement */}
+                    <Route
+                      path="/procurement"
+                      element={
+                        <PageSuspense>
+                          <ProcurementDashboard />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/procurement/vendors/:id"
+                      element={
+                        <PageSuspense>
+                          <VendorProfilePage />
+                        </PageSuspense>
+                      }
+                    />
 
-                  {/* Error Testing Routes */}
-                  <Route
-                    path="/403"
-                    element={
-                      <PageSuspense>
-                        <ForbiddenPage />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="/500"
-                    element={
-                      <PageSuspense>
-                        <ServerErrorPage />
-                      </PageSuspense>
-                    }
-                  />
-                  <Route
-                    path="*"
-                    element={
-                      <PageSuspense>
-                        <NotFoundPage />
-                      </PageSuspense>
-                    }
-                  />
+                    {/* Error Testing Routes */}
+                    <Route
+                      path="/403"
+                      element={
+                        <PageSuspense>
+                          <ForbiddenPage />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="/500"
+                      element={
+                        <PageSuspense>
+                          <ServerErrorPage />
+                        </PageSuspense>
+                      }
+                    />
+                    <Route
+                      path="*"
+                      element={
+                        <PageSuspense>
+                          <NotFoundPage />
+                        </PageSuspense>
+                      }
+                    />
+                  </Route>
                 </Route>
               </Route>
-            </Route>
-          </Routes>
-        </BrowserRouter>
+            </Routes>
+          </BrowserRouter>
+        </GlobalErrorBoundary>
         <Toaster />
       </ThemeProvider>
     </QueryClientProvider>
