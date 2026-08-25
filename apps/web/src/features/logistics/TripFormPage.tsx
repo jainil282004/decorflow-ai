@@ -254,7 +254,9 @@ const TripFormPageInner = () => {
                   <h3 className="text-lg font-medium">Destination</h3>
                 </div>
                 <div className="relative">
-                  <FormLabel>Search Location</FormLabel>
+                  <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Search Location
+                  </label>
                   <Input
                     placeholder="Type to search for a location..."
                     value={locationSearch}
