@@ -1452,6 +1452,10 @@ model Trip {
   driverId           String
   pickupWarehouseId  String?
   destinationVenueId String?
+  
+  // Custom one-off destination
+  customDestinationAddress String?
+  customDestinationUrl     String?
 
   plannedDeparture DateTime?
   plannedArrival   DateTime?

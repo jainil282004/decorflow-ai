@@ -9,7 +9,6 @@ import {
   CardDescription,
 } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
-import { format } from 'date-fns';
 import { useTrip, useDispatchTrip, useCompleteTrip } from './api/logisticsApi';
 import {
   ArrowLeft,
@@ -19,11 +18,13 @@ import {
   Clock,
   MapPin,
   UserCircle,
+  ExternalLink,
 } from 'lucide-react';
 import { Checkbox } from '../../components/ui/checkbox';
 import { Skeleton } from '../../components/ui/skeleton';
 import { EmptyState } from '../../components/ui/empty-state';
 import { useToast } from '../../hooks/use-toast';
+import { safeFormatDate } from '../../utils';
 
 export const TripDetailsPage = () => {
   const { id } = useParams();
@@ -177,7 +178,7 @@ export const TripDetailsPage = () => {
                   <p className="text-lg">{trip.pickupWarehouse?.name || 'Main Warehouse'}</p>
                   <p className="text-sm text-muted-foreground">
                     {trip.plannedDeparture
-                      ? format(new Date(trip.plannedDeparture), 'PPP p')
+                      ? safeFormatDate(trip.plannedDeparture, 'PPP p', 'Unscheduled')
                       : 'Unscheduled'}
                   </p>
                 </div>
@@ -189,10 +190,22 @@ export const TripDetailsPage = () => {
                 </div>
                 <div>
                   <h4 className="font-medium text-sm text-muted-foreground">Destination</h4>
-                  <p className="text-lg">{trip.destinationVenue?.name || 'Event Venue'}</p>
+                  <p className="text-lg">
+                    {trip.customDestinationAddress || trip.destinationVenue?.name || 'Event Venue'}
+                  </p>
+                  {trip.customDestinationUrl && (
+                    <a
+                      href={trip.customDestinationUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-sm text-primary hover:underline my-1"
+                    >
+                      <ExternalLink className="w-3 h-3" /> View on Maps
+                    </a>
+                  )}
                   <p className="text-sm text-muted-foreground">
                     {trip.plannedArrival
-                      ? format(new Date(trip.plannedArrival), 'PPP p')
+                      ? safeFormatDate(trip.plannedArrival, 'PPP p', 'Unscheduled')
                       : 'Unscheduled'}
                   </p>
                 </div>
@@ -388,7 +401,7 @@ export const TripDetailsPage = () => {
                 <div>
                   <p className="text-sm font-medium">Trip Created</p>
                   <p className="text-xs text-muted-foreground">
-                    {format(new Date(trip.createdAt), 'PP p')}
+                    {safeFormatDate(trip.createdAt, 'PP p')}
                   </p>
                 </div>
               </div>
@@ -399,7 +412,7 @@ export const TripDetailsPage = () => {
                   <div>
                     <p className="text-sm font-medium">Dispatched</p>
                     <p className="text-xs text-muted-foreground">
-                      {format(new Date(trip.actualDeparture), 'PP p')}
+                      {safeFormatDate(trip.actualDeparture, 'PP p')}
                     </p>
                   </div>
                 </div>
@@ -411,7 +424,7 @@ export const TripDetailsPage = () => {
                   <div>
                     <p className="text-sm font-medium">Completed</p>
                     <p className="text-xs text-muted-foreground">
-                      {format(new Date(trip.actualArrival), 'PP p')}
+                      {safeFormatDate(trip.actualArrival, 'PP p')}
                     </p>
                   </div>
                 </div>

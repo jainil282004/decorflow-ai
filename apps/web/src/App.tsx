@@ -105,6 +105,9 @@ const FleetDashboard = React.lazy(() =>
 const VehicleFormPage = React.lazy(() =>
   import('./features/logistics/VehicleFormPage').then((m) => ({ default: m.VehicleFormPage }))
 );
+const TripFormPage = React.lazy(() =>
+  import('./features/logistics/TripFormPage').then((m) => ({ default: m.TripFormPage }))
+);
 const TripDetailsPage = React.lazy(() =>
   import('./features/logistics/TripDetailsPage').then((m) => ({ default: m.TripDetailsPage }))
 );
@@ -599,6 +602,14 @@ function App() {
                     element={
                       <PageSuspense>
                         <VehicleFormPage />
+                      </PageSuspense>
+                    }
+                  />
+                  <Route
+                    path="/fleet/trips/new"
+                    element={
+                      <PageSuspense>
+                        <TripFormPage />
                       </PageSuspense>
                     }
                   />
