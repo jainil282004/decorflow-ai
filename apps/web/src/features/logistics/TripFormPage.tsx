@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useJsApiLoader } from '@react-google-maps/api';
+import usePlacesAutocomplete, { getGeocode, getLatLng } from 'use-places-autocomplete';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -33,6 +35,8 @@ const tripSchema = z.object({
 });
 
 type TripFormValues = z.infer<typeof tripSchema>;
+
+const LIBRARIES: 'places'[] = ['places'];
 
 export const TripFormPage = () => {
   return (
@@ -74,43 +78,40 @@ const TripFormPageInner = () => {
     },
   });
 
-  const [locationSearch, setLocationSearch] = useState('');
-  const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
-  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
+    libraries: LIBRARIES,
+  });
+
+  const {
+    ready,
+    value: locationSearch,
+    suggestions: { status, data: locationSuggestions },
+    setValue: setLocationSearch,
+    clearSuggestions,
+  } = usePlacesAutocomplete({
+    debounce: 300,
+    initOnMount: isLoaded,
+  });
+
   const [selectedLocationUrl, setSelectedLocationUrl] = useState('');
 
-  // Debounced search for Nominatim
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (locationSearch.length > 2) {
-        setIsSearchingLocation(true);
-        fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationSearch)}`
-        )
-          .then((res) => res.json())
-          .then((data) => {
-            setLocationSuggestions(data);
-          })
-          .catch((err) => {
-            console.error('Error fetching locations:', err);
-          })
-          .finally(() => {
-            setIsSearchingLocation(false);
-          });
-      } else {
-        setLocationSuggestions([]);
-      }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [locationSearch]);
+  const handleSelectLocation = async (suggestion: any) => {
+    const address = suggestion.description;
+    form.setValue('customDestinationAddress', address);
+    setLocationSearch(address, false);
+    clearSuggestions();
 
-  const handleSelectLocation = (suggestion: any) => {
-    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${suggestion.lat},${suggestion.lon}`;
-    form.setValue('customDestinationAddress', suggestion.display_name);
-    form.setValue('customDestinationUrl', mapUrl);
-    setSelectedLocationUrl(mapUrl);
-    setLocationSearch(suggestion.display_name);
-    setLocationSuggestions([]);
+    try {
+      const results = await getGeocode({ address });
+      const { lat, lng } = await getLatLng(results[0]);
+      const mapUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+      form.setValue('customDestinationUrl', mapUrl);
+      setSelectedLocationUrl(mapUrl);
+    } catch (error) {
+      console.error('Error getting geocode:', error);
+      toast({ title: 'Error fetching location details', variant: 'destructive' });
+    }
   };
 
   const onSubmit = async (data: TripFormValues) => {
@@ -266,13 +267,14 @@ const TripFormPageInner = () => {
                       form.setValue('customDestinationUrl', '');
                       setSelectedLocationUrl('');
                     }}
+                    disabled={!ready}
                   />
-                  {isSearchingLocation && (
+                  {!isLoaded && (
                     <div className="absolute right-3 top-9">
                       <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
                     </div>
                   )}
-                  {locationSuggestions.length > 0 && (
+                  {status === 'OK' && (
                     <ul className="absolute z-10 w-full mt-1 max-h-60 overflow-auto bg-popover text-popover-foreground rounded-md border shadow-md">
                       {locationSuggestions.map((s) => (
                         <li
@@ -280,7 +282,7 @@ const TripFormPageInner = () => {
                           className="px-4 py-2 hover:bg-muted cursor-pointer text-sm"
                           onClick={() => handleSelectLocation(s)}
                         >
-                          {s.display_name}
+                          {s.description}
                         </li>
                       ))}
                     </ul>
