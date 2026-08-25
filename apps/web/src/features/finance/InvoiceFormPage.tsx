@@ -17,7 +17,10 @@ import {
   FormMessage,
 } from '../../components/ui/form';
 import { useCreateInvoice, useQuotations, useQuotation } from '../finance/api/financeApi';
-import { useCustomers } from '../customers/api/customersApi';
+import { useCustomers, useCreateCustomer } from '../customers/api/customersApi';
+import { useEvents } from '../events/api/eventsApi';
+import { useInventoryItems } from '../inventory/api/inventoryApi';
+import { Combobox } from '../../components/ui/combobox';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { DEFAULT_TAX_RATE_PERCENT } from '../../config/tax';
@@ -26,6 +29,7 @@ const itemSchema = z.object({
   description: z.string().min(1, 'Required'),
   quantity: z.coerce.number().min(1),
   unitPrice: z.coerce.number().min(0),
+  variantId: z.string().optional(),
 });
 
 const invoiceFormSchema = z.object({
@@ -33,6 +37,7 @@ const invoiceFormSchema = z.object({
   date: z.string().min(1, 'Required'),
   dueDate: z.string().min(1, 'Required'),
   notes: z.string().optional(),
+  eventId: z.string().optional(),
   items: z.array(itemSchema).min(1, 'At least one item required'),
   discountTotal: z.coerce.number().min(0).optional(),
   applyTax: z.boolean(),
@@ -43,7 +48,14 @@ export const InvoiceFormPage = () => {
   const { toast } = useToast();
   const createMutation = useCreateInvoice();
   const { data: customersResponse } = useCustomers(1, 100, '');
-  const customers = customersResponse?.data;
+  const customers = customersResponse?.data || [];
+  const createCustomer = useCreateCustomer();
+
+  const { data: inventoryResponse } = useInventoryItems(1, 200, '');
+  const inventoryItems = inventoryResponse?.data || [];
+
+  const { data: eventsResponse } = useEvents(1, 100, '');
+  const events = eventsResponse?.data || [];
 
   const form = useForm({
     resolver: zodResolver(invoiceFormSchema),
@@ -51,9 +63,10 @@ export const InvoiceFormPage = () => {
       customerId: '',
       date: new Date().toISOString().split('T')[0],
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      items: [{ description: '', quantity: 1, unitPrice: 0 }],
+      items: [{ description: '', quantity: 1, unitPrice: 0, variantId: '' }],
       discountTotal: 0,
       applyTax: true,
+      eventId: '',
     },
   });
 
@@ -104,7 +117,9 @@ export const InvoiceFormPage = () => {
         ...i,
         taxRate: applyTax ? DEFAULT_TAX_RATE_PERCENT : 0,
         totalPrice: i.quantity * i.unitPrice,
+        variantId: i.variantId,
       })),
+      eventId: data.eventId || undefined,
     };
 
     createMutation.mutate(payload, {
@@ -158,17 +173,27 @@ export const InvoiceFormPage = () => {
                     <FormItem>
                       <FormLabel>Customer</FormLabel>
                       <FormControl>
-                        <select
-                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                          {...field}
-                        >
-                          <option value="">Select a customer...</option>
-                          {customers?.map((c: any) => (
-                            <option key={c.id} value={c.id}>
-                              {c.name}
-                            </option>
-                          ))}
-                        </select>
+                        <Combobox
+                          options={customers.map((c: any) => ({
+                            value: c.id,
+                            label: c.name,
+                          }))}
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder="Search customer..."
+                          onCreate={async (val) => {
+                            try {
+                              const res = await createCustomer.mutateAsync({
+                                type: 'INDIVIDUAL',
+                                name: val,
+                              });
+                              field.onChange(res.data.id);
+                              toast({ title: 'Customer created' });
+                            } catch {
+                              toast({ title: 'Failed to create customer', variant: 'destructive' });
+                            }
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -202,6 +227,27 @@ export const InvoiceFormPage = () => {
                     </FormItem>
                   )}
                 />
+                <FormField
+                  control={form.control}
+                  name="eventId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Link to Event (Optional)</FormLabel>
+                      <FormControl>
+                        <Combobox
+                          options={events.map((e: any) => ({
+                            value: e.id,
+                            label: `${e.title} (${new Date(e.startDate).toLocaleDateString()})`,
+                          }))}
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder="Select an event..."
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             </CardContent>
           </Card>
@@ -214,7 +260,9 @@ export const InvoiceFormPage = () => {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => append({ description: '', quantity: 1, unitPrice: 0 })}
+                  onClick={() =>
+                    append({ description: '', quantity: 1, unitPrice: 0, variantId: '' })
+                  }
                 >
                   <Plus className="h-4 w-4 mr-2" /> Add Item
                 </Button>
@@ -229,7 +277,32 @@ export const InvoiceFormPage = () => {
                       render={({ field }) => (
                         <FormItem className="flex-1">
                           <FormControl>
-                            <Input placeholder="Description" {...field} />
+                            <Combobox
+                              options={inventoryItems.map((inv) => ({
+                                value: inv.id,
+                                label: `${inv.name} (₹${inv.rentalPrice || 0})`,
+                              }))}
+                              value={watchedItems[index]?.variantId || ''}
+                              onChange={(val) => {
+                                const selected = inventoryItems.find((inv) => inv.id === val);
+                                if (selected) {
+                                  field.onChange(selected.name); // Keep description as name
+                                  form.setValue(
+                                    `items.${index}.unitPrice`,
+                                    selected.rentalPrice || 0
+                                  );
+                                  form.setValue(`items.${index}.variantId`, selected.id); // Hack: using id as variantId since inventory structure changed
+                                } else {
+                                  form.setValue(`items.${index}.variantId`, '');
+                                }
+                              }}
+                              placeholder="Search Inventory..."
+                              onCreate={(val) => {
+                                field.onChange(val);
+                                form.setValue(`items.${index}.variantId`, '');
+                              }}
+                              createLabel="Use custom item"
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

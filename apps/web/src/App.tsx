@@ -13,6 +13,9 @@ import { PageLoader } from './components/PageLoader';
 const LoginPage = React.lazy(() =>
   import('./features/auth/LoginPage').then((m) => ({ default: m.LoginPage }))
 );
+const RegisterAccountPage = React.lazy(() =>
+  import('./features/auth/RegisterAccountPage').then((m) => ({ default: m.RegisterAccountPage }))
+);
 const ForgotPasswordPage = React.lazy(() =>
   import('./features/auth/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage }))
 );
@@ -232,6 +235,14 @@ function App() {
                   element={
                     <PageSuspense>
                       <LoginPage />
+                    </PageSuspense>
+                  }
+                />
+                <Route
+                  path="/register"
+                  element={
+                    <PageSuspense>
+                      <RegisterAccountPage />
                     </PageSuspense>
                   }
                 />

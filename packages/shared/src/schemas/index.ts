@@ -68,3 +68,31 @@ export type ResetPasswordDTO = z.infer<typeof resetPasswordSchema>;
 export type ChangePasswordDTO = z.infer<typeof changePasswordSchema>;
 export type UpdateProfileDTO = z.infer<typeof updateProfileSchema>;
 export type UserResponseDTO = z.infer<typeof userResponseSchema>;
+
+export const registerAccountSchema = z
+  .object({
+    name: z.string().min(2).max(50),
+    email: z.string().email(),
+    password: z
+      .string()
+      .min(8)
+      .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+      .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+      .regex(/[0-9]/, 'Password must contain at least one number'),
+    accountType: z.enum(['OWNER', 'DRIVER', 'WAREHOUSE']),
+    masterPassword: z.string().min(1),
+    organizationName: z.string().min(2).max(100).optional(),
+    createNewOrganization: z.boolean().optional().default(false),
+  })
+  .superRefine((data, ctx) => {
+    if (data.accountType === 'OWNER' && data.createNewOrganization) {
+      if (!data.organizationName || data.organizationName.trim() === '') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Organisation name is required',
+          path: ['organizationName'],
+        });
+      }
+    }
+  });
+export type RegisterAccountDTO = z.infer<typeof registerAccountSchema>;

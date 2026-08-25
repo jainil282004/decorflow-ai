@@ -164,6 +164,15 @@ export const LoginPage = () => {
             Sign In
           </Button>
 
+          <div className="text-center mt-4">
+            <a
+              href="/register"
+              className="text-sm text-primary hover:text-primary/80 hover:underline underline-offset-4 transition-colors"
+            >
+              Need an account? Create one
+            </a>
+          </div>
+
           {/* TODO: Re-add Google/Apple OAuth buttons when backend OAuth is implemented. */}
         </form>
       </Form>

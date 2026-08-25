@@ -8,6 +8,7 @@ import {
   dispatchJobSchema,
   receiveReturnSchema,
 } from '@decorflow/shared';
+import { ApiError } from '../../utils/errors';
 
 const packingService = new PackingService();
 
@@ -95,6 +96,37 @@ export class PackingController {
         req.user!.companyId!,
         req.user!.id,
         data
+      );
+      return sendSuccess(res, job);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async updateDispatchAssignment(req: Request, res: Response, next: NextFunction) {
+    try {
+      const vehicleId = req.body?.vehicleId;
+      const driverId = req.body?.driverId;
+      if (typeof vehicleId !== 'string' || !vehicleId.trim()) {
+        throw new ApiError(400, 'vehicleId is required');
+      }
+      if (typeof driverId !== 'string' || !driverId.trim()) {
+        throw new ApiError(400, 'driverId is required');
+      }
+
+      const job = await packingService.updateDispatchAssignment(
+        req.params.id,
+        req.user!.companyId!,
+        {
+          vehicleId: vehicleId.trim(),
+          driverId: driverId.trim(),
+          dispatchNotes:
+            typeof req.body?.dispatchNotes === 'string' ? req.body.dispatchNotes : undefined,
+          dispatchChecklist:
+            typeof req.body?.dispatchChecklist === 'string'
+              ? req.body.dispatchChecklist
+              : undefined,
+        }
       );
       return sendSuccess(res, job);
     } catch (error) {

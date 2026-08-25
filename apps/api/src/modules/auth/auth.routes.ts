@@ -4,6 +4,7 @@ import { requireAuth } from '../../middlewares/auth.middleware';
 
 const router = Router();
 
+router.post('/register', authController.registerAccount);
 router.post('/login', authController.login);
 router.post('/refresh', authController.refreshToken);
 router.post('/logout', authController.logout);

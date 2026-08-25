@@ -42,6 +42,11 @@ export const updateDriverSchema = createDriverSchema.partial();
 // ==========================================
 // TRIP SCHEMAS
 // ==========================================
+export const tripLoadItemSchema = z.object({
+  name: z.string().min(1),
+  quantity: z.coerce.number().min(1).default(1),
+});
+
 export const createTripSchema = z.object({
   eventId: z.string().uuid(),
   vehicleId: z.string().uuid(),
@@ -53,6 +58,7 @@ export const createTripSchema = z.object({
   plannedDeparture: z.string().datetime().optional(),
   plannedArrival: z.string().datetime().optional(),
   notes: z.string().optional(),
+  loadItems: z.array(tripLoadItemSchema).optional(),
 });
 
 export const updateTripSchema = z.object({
@@ -64,6 +70,7 @@ export const updateTripSchema = z.object({
   plannedDeparture: z.string().datetime().optional(),
   plannedArrival: z.string().datetime().optional(),
   notes: z.string().optional(),
+  loadItems: z.array(tripLoadItemSchema).optional(),
 });
 
 // ==========================================

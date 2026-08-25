@@ -11,14 +11,20 @@ export type SendMailInput = {
 /**
  * Lightweight mail sender with no extra npm dependencies.
  * - If RESEND_API_KEY is set, sends via Resend's HTTPS API.
- * - Otherwise logs the message (dev/local fallback) so reset links are still usable.
+ * - In development/test without a key, logs the message so reset links remain usable locally.
+ * - In production without a key, fails loudly (do not silently "send" by logging).
  */
 export async function sendMail(input: SendMailInput): Promise<void> {
-  const apiKey = env.RESEND_API_KEY;
+  const apiKey = env.RESEND_API_KEY?.trim();
   const from = env.MAIL_FROM;
 
   if (!apiKey) {
-    logger.warn('Mail not configured (RESEND_API_KEY missing) — logging email instead', {
+    if (env.NODE_ENV === 'production') {
+      logger.error('RESEND_API_KEY is required in production — refusing to log mail content');
+      throw new Error('Email is not configured');
+    }
+
+    logger.warn('Mail not configured (RESEND_API_KEY missing) — logging email instead (dev only)', {
       to: input.to,
       subject: input.subject,
       text: input.text,

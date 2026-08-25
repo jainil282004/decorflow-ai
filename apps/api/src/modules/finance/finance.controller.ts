@@ -81,7 +81,7 @@ export class FinanceController {
   async createInvoice(req: Request, res: Response, next: NextFunction) {
     try {
       const data = createInvoiceSchema.parse(req.body);
-      const result = await financeService.createInvoice(req.user!.companyId!, data);
+      const result = await financeService.createInvoice(req.user!.companyId!, req.user!.id!, data);
       return sendCreated(res, result);
     } catch (error) {
       next(error);

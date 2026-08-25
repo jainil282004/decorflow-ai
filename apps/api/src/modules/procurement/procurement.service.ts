@@ -214,15 +214,12 @@ export class ProcurementService {
   // LOW STOCK REPORT
   // ==========================================
   async getLowStockItems(companyId: string) {
-    // This is a naive implementation. In a real system, we'd check item reorderPoint
     const items = await prisma.inventoryItem.findMany({
-      where: {
-        companyId,
-        availableQuantity: { lte: 10 }, // Hardcoded threshold for demo
-      },
+      where: { companyId, isActive: true, deletedAt: null },
       include: { variants: true },
     });
 
-    return items;
+    // Column-to-column: availableQuantity <= minStock (not a hardcoded threshold)
+    return items.filter((item) => item.availableQuantity <= item.minStock);
   }
 }

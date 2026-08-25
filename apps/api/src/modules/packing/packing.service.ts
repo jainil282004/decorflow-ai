@@ -7,6 +7,7 @@ import type {
   ReceiveReturnDTO,
 } from '@decorflow/shared';
 import { ApiError } from '../../utils/errors';
+import { inventoryService } from '../inventory/inventory.service';
 
 export class PackingService {
   async findAll(companyId: string, page: number = 1, limit: number = 10, status?: string) {
@@ -65,6 +66,25 @@ export class PackingService {
       if (!warehouse) throw new ApiError(404, 'Warehouse not found for this company');
     }
 
+    // Hard-block double-booking before any reservation rows are written.
+    // Sum by variant so multi-line same-variant requests are checked as one demand.
+    const demandByVariant = new Map<string, number>();
+    for (const line of data.items) {
+      demandByVariant.set(
+        line.variantId,
+        (demandByVariant.get(line.variantId) || 0) + line.expectedQuantity
+      );
+    }
+    for (const [variantId, requiredQuantity] of demandByVariant) {
+      await inventoryService.checkVariantAvailability(
+        companyId,
+        variantId,
+        event.startDate,
+        event.endDate,
+        requiredQuantity
+      );
+    }
+
     const warehouseId =
       data.warehouseId && data.warehouseId.length > 0 ? data.warehouseId : undefined;
 
@@ -111,6 +131,25 @@ export class PackingService {
       throw new ApiError(
         400,
         `Cannot start packing for job in status ${job.status}. Expected PENDING.`
+      );
+    }
+
+    // Safety net: exclude this job so its own PENDING expected qty is not double-counted.
+    const demandByVariant = new Map<string, number>();
+    for (const line of job.items) {
+      demandByVariant.set(
+        line.variantId,
+        (demandByVariant.get(line.variantId) || 0) + line.expectedQuantity
+      );
+    }
+    for (const [variantId, requiredQuantity] of demandByVariant) {
+      await inventoryService.checkVariantAvailability(
+        companyId,
+        variantId,
+        job.event.startDate,
+        job.event.endDate,
+        requiredQuantity,
+        id
       );
     }
 
@@ -242,18 +281,112 @@ export class PackingService {
       throw new ApiError(400, `Cannot dispatch job in status ${job.status}. Expected VERIFIED.`);
     }
 
+    const { vehicleId, driverId } = await this.assertDispatchFleet(
+      companyId,
+      data.vehicleId,
+      data.driverId
+    );
+
     return prisma.packingJob.update({
       where: { id },
       data: {
         status: 'DISPATCHED',
         dispatchedById: userId,
         dispatchedAt: new Date(),
-        vehicleId: data.vehicleId,
-        driverId: data.driverId,
+        vehicleId,
+        driverId,
         dispatchChecklist: data.dispatchChecklist,
         dispatchNotes: data.dispatchNotes,
       },
+      include: {
+        event: { include: { customer: true, venue: true } },
+        warehouse: true,
+        vehicle: true,
+        driver: { include: { user: { select: { id: true, name: true, email: true } } } },
+        items: { include: { variant: { include: { item: true } } } },
+      },
     });
+  }
+
+  /**
+   * Assign or change the vehicle/driver on a packing dispatch.
+   * Allowed for VERIFIED (pre-dispatch staging) and DISPATCHED jobs.
+   */
+  async updateDispatchAssignment(
+    id: string,
+    companyId: string,
+    data: {
+      vehicleId: string;
+      driverId: string;
+      dispatchNotes?: string;
+      dispatchChecklist?: string;
+    }
+  ) {
+    const job = await this.findById(id, companyId);
+    if (!['VERIFIED', 'DISPATCHED'].includes(job.status)) {
+      throw new ApiError(
+        400,
+        `Cannot assign fleet for job in status ${job.status}. Expected VERIFIED or DISPATCHED.`
+      );
+    }
+
+    const { vehicleId, driverId } = await this.assertDispatchFleet(
+      companyId,
+      data.vehicleId,
+      data.driverId
+    );
+
+    return prisma.packingJob.update({
+      where: { id },
+      data: {
+        vehicleId,
+        driverId,
+        ...(data.dispatchNotes !== undefined ? { dispatchNotes: data.dispatchNotes } : {}),
+        ...(data.dispatchChecklist !== undefined
+          ? { dispatchChecklist: data.dispatchChecklist }
+          : {}),
+      },
+      include: {
+        event: { include: { customer: true, venue: true } },
+        warehouse: true,
+        vehicle: true,
+        driver: { include: { user: { select: { id: true, name: true, email: true } } } },
+        items: { include: { variant: { include: { item: true } } } },
+      },
+    });
+  }
+
+  /** Require real Vehicle + Driver FKs scoped to the company (not free-text notes). */
+  private async assertDispatchFleet(
+    companyId: string,
+    vehicleId?: string,
+    driverId?: string
+  ): Promise<{ vehicleId: string; driverId: string }> {
+    if (!vehicleId || !driverId) {
+      throw new ApiError(400, 'vehicleId and driverId are required to dispatch or assign fleet');
+    }
+
+    const vehicle = await prisma.vehicle.findFirst({
+      where: { id: vehicleId, companyId },
+    });
+    if (!vehicle) {
+      throw new ApiError(404, 'Vehicle not found for this company');
+    }
+    if (vehicle.status !== 'ACTIVE') {
+      throw new ApiError(400, `Vehicle is not ACTIVE (current status: ${vehicle.status})`);
+    }
+
+    const driver = await prisma.driver.findFirst({
+      where: { id: driverId, companyId },
+    });
+    if (!driver) {
+      throw new ApiError(404, 'Driver not found for this company');
+    }
+    if (driver.availabilityStatus === 'ON_LEAVE') {
+      throw new ApiError(400, 'Driver is ON_LEAVE and cannot be assigned to dispatch');
+    }
+
+    return { vehicleId, driverId };
   }
 
   async receiveReturns(id: string, companyId: string, userId: string, data: ReceiveReturnDTO) {
@@ -407,3 +540,5 @@ export class PackingService {
     });
   }
 }
+
+export const packingService = new PackingService();

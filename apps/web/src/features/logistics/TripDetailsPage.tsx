@@ -19,12 +19,30 @@ import {
   MapPin,
   UserCircle,
   ExternalLink,
+  Package,
 } from 'lucide-react';
 import { Checkbox } from '../../components/ui/checkbox';
 import { Skeleton } from '../../components/ui/skeleton';
 import { EmptyState } from '../../components/ui/empty-state';
 import { useToast } from '../../hooks/use-toast';
 import { safeFormatDate } from '../../utils';
+
+function buildGoogleMapsUrl(venue?: {
+  googleMapsUrl?: string | null;
+  coordinates?: string | null;
+  address?: string | null;
+  name?: string | null;
+}) {
+  if (!venue) return null;
+  if (venue.googleMapsUrl) return venue.googleMapsUrl;
+  if (venue.coordinates) {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venue.coordinates)}`;
+  }
+  if (venue.address) {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venue.address)}`;
+  }
+  return null;
+}
 
 export const TripDetailsPage = () => {
   const { id } = useParams();
@@ -193,16 +211,29 @@ export const TripDetailsPage = () => {
                   <p className="text-lg">
                     {trip.customDestinationAddress || trip.destinationVenue?.name || 'Event Venue'}
                   </p>
-                  {trip.customDestinationUrl && (
+
+                  {buildGoogleMapsUrl(trip.destinationVenue) && (
+                    <Button asChild variant="link" className="p-0 h-auto text-primary gap-1 my-1">
+                      <a
+                        href={buildGoogleMapsUrl(trip.destinationVenue)!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="w-3 h-3" /> Go to Location
+                      </a>
+                    </Button>
+                  )}
+                  {trip.customDestinationUrl && !buildGoogleMapsUrl(trip.destinationVenue) && (
                     <a
                       href={trip.customDestinationUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-sm text-primary hover:underline my-1"
                     >
-                      <ExternalLink className="w-3 h-3" /> View on Maps
+                      <ExternalLink className="w-3 h-3" /> Go to Location
                     </a>
                   )}
+
                   <p className="text-sm text-muted-foreground">
                     {trip.plannedArrival
                       ? safeFormatDate(trip.plannedArrival, 'PPP p', 'Unscheduled')
@@ -360,6 +391,24 @@ export const TripDetailsPage = () => {
         </div>
 
         <div className="space-y-6">
+          {trip.loadItems && trip.loadItems.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Package className="w-5 h-5 text-primary" /> What to Load
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {trip.loadItems.map((item: any, idx: number) => (
+                  <div key={idx} className="flex justify-between p-2 bg-muted/50 rounded-md">
+                    <span className="font-medium">{item.name}</span>
+                    <span className="text-muted-foreground">Qty: {item.quantity}</span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Assignment</CardTitle>

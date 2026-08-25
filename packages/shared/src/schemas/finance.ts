@@ -8,6 +8,7 @@ export const createQuotationItemSchema = z.object({
   quantity: z.number().int().positive(),
   unitPrice: z.number().nonnegative(),
   taxRate: z.number().nonnegative().default(0),
+  variantId: z.string().uuid().optional(),
 });
 
 export const createQuotationSchema = z.object({
@@ -31,6 +32,7 @@ export const createInvoiceItemSchema = z.object({
   quantity: z.number().int().positive(),
   unitPrice: z.number().nonnegative(),
   taxRate: z.number().nonnegative().default(0),
+  variantId: z.string().uuid().optional(),
 });
 
 export const createInvoiceSchema = z.object({

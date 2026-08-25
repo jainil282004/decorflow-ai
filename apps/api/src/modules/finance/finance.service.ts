@@ -1,5 +1,6 @@
 import { prisma } from '../../lib/prisma';
 import { ApiError } from '../../utils/errors';
+import { packingService } from '../packing/packing.service';
 import type {
   CreateQuotationDTO,
   UpdateQuotationStatusDTO,
@@ -121,6 +122,7 @@ export class FinanceService {
               quantity: item.quantity,
               unitPrice: item.unitPrice,
               taxRate: item.taxRate,
+              variantId: item.variantId,
             })),
           },
         },
@@ -155,7 +157,7 @@ export class FinanceService {
     return invoice;
   }
 
-  async createInvoice(companyId: string, data: CreateInvoiceDTO) {
+  async createInvoice(companyId: string, userId: string, data: CreateInvoiceDTO) {
     const { items, ...rest } = data;
 
     const count = await prisma.invoice.count({ where: { companyId } });
@@ -171,6 +173,19 @@ export class FinanceService {
     });
 
     const totalAmount = subTotal + taxTotal - (rest.discountTotal || 0);
+
+    if (data.eventId) {
+      const packingItems = items
+        .filter((i) => i.variantId)
+        .map((i) => ({ variantId: i.variantId as string, expectedQuantity: i.quantity }));
+
+      if (packingItems.length > 0) {
+        await packingService.create(companyId, userId, {
+          eventId: data.eventId,
+          items: packingItems,
+        });
+      }
+    }
 
     return prisma.invoice.create({
       data: {

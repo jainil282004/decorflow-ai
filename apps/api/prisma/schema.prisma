@@ -624,6 +624,8 @@ model InventoryVariant {
   cleaningJobs            CleaningJob[]
   repairJobs              RepairJob[]
   PurchaseRequisitionItem PurchaseRequisitionItem[]
+  invoiceItems            InvoiceItem[]
+  quotationItems          QuotationItem[]
 }
 
 model InventoryImage {
@@ -1128,12 +1130,14 @@ model Invoice {
 model InvoiceItem {
   id          String @id @default(uuid())
   invoiceId   String
+  variantId   String?
   description String
   quantity    Int
   unitPrice   Float
   taxRate     Float  @default(0)
 
-  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoice Invoice           @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  variant InventoryVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
 }
 
 model Payment {
@@ -1200,12 +1204,14 @@ model Quotation {
 model QuotationItem {
   id          String @id @default(uuid())
   quotationId String
+  variantId   String?
   description String
   quantity    Int
   unitPrice   Float
   taxRate     Float  @default(0)
 
-  quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  quotation Quotation         @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  variant   InventoryVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
 }
 
 model VendorBill {
@@ -1465,6 +1471,7 @@ model Trip {
   status   String // PENDING, DISPATCHED, COMPLETED, CANCELLED
   distance Float?
   notes    String?
+  loadItems String? // JSON array of { name: string, quantity: number }
 
   // Pre-Dispatch Checklist
   checkVehicleInspection Boolean @default(false)

@@ -19,12 +19,14 @@
     "postinstall": "npm run build --workspace=@decorflow/shared && npm run build --workspace=@decorflow/logger && prisma generate --schema=apps/api/prisma/schema.prisma",
     "db:migrate": "prisma migrate deploy --schema=apps/api/prisma/schema.prisma",
     "db:seed": "npm run db:seed --workspace=api",
+    "db:seed:reset-demo": "npm run db:seed:reset-demo --workspace=api",
     "db:setup": "npm run db:migrate && npm run db:seed"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.3.0",
     "@commitlint/config-conventional": "^19.2.2",
     "husky": "^9.0.11",
+    "jsdom": "^30.0.1",
     "lint-staged": "^15.2.5",
     "prettier": "^3.2.5",
     "prisma": "^5.14.0",

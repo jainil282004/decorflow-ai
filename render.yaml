@@ -23,6 +23,13 @@ services:
         value: production
       - key: DATABASE_URL
         sync: false
+      - key: MASTER_ACCOUNT_PASSWORD
+        sync: false
       - key: JWT_SECRET
         generateValue: true
+      # Password-reset emails (set in Render dashboard — do not commit the key)
+      - key: RESEND_API_KEY
+        sync: false
+      - key: APP_URL
+        sync: false
       # CORS_ORIGIN falls back to RENDER_EXTERNAL_URL at runtime

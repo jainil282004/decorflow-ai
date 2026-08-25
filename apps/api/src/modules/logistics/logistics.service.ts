@@ -11,6 +11,24 @@ import type {
   CompleteTripDTO,
 } from '@decorflow/shared';
 
+const serializeLoadItems = (items?: any[]) => {
+  if (items === undefined) return undefined;
+  return JSON.stringify(items);
+};
+
+const parseLoadItems = <T extends { loadItems?: string | null }>(trip: T) => {
+  if (!trip) return trip;
+  let parsed = [];
+  if (trip.loadItems) {
+    try {
+      parsed = JSON.parse(trip.loadItems);
+    } catch (e) {
+      parsed = [];
+    }
+  }
+  return { ...trip, loadItems: parsed };
+};
+
 export class LogisticsService {
   // ==========================================
   // VEHICLES
@@ -114,7 +132,7 @@ export class LogisticsService {
   // TRIPS
   // ==========================================
   async findAllTrips(companyId: string) {
-    return prisma.trip.findMany({
+    const trips = await prisma.trip.findMany({
       where: { companyId },
       include: {
         event: true,
@@ -125,6 +143,7 @@ export class LogisticsService {
       },
       orderBy: { plannedDeparture: 'asc' },
     });
+    return trips.map(parseLoadItems);
   }
 
   async findTripById(id: string, companyId: string) {
@@ -139,7 +158,7 @@ export class LogisticsService {
       },
     });
     if (!trip) throw new ApiError(404, 'Trip not found');
-    return trip;
+    return parseLoadItems(trip);
   }
 
   private async checkConflict(
@@ -176,14 +195,17 @@ export class LogisticsService {
       await this.checkConflict(companyId, data.vehicleId, data.driverId, start, end);
     }
 
-    return prisma.trip.create({
+    const payload = { ...data, loadItems: serializeLoadItems(data.loadItems) };
+
+    const trip = await prisma.trip.create({
       data: {
         companyId,
-        ...data,
+        ...payload,
         status: 'PENDING',
       },
       include: { vehicle: true, driver: true },
     });
+    return parseLoadItems(trip);
   }
 
   async updateTrip(id: string, companyId: string, data: UpdateTripDTO) {
@@ -201,10 +223,13 @@ export class LogisticsService {
       await this.checkConflict(companyId, checkVehicle, checkDriver, start, end, id);
     }
 
-    return prisma.trip.update({
+    const payload = { ...data, loadItems: serializeLoadItems(data.loadItems) };
+
+    const updatedTrip = await prisma.trip.update({
       where: { id },
-      data,
+      data: payload,
     });
+    return parseLoadItems(updatedTrip);
   }
 
   async dispatchTrip(id: string, companyId: string, data: DispatchTripDTO) {
@@ -233,7 +258,7 @@ export class LogisticsService {
         data: { availabilityStatus: 'ON_TRIP' },
       });
 
-      return updatedTrip;
+      return parseLoadItems(updatedTrip);
     });
   }
 
@@ -271,7 +296,7 @@ export class LogisticsService {
         });
       }
 
-      return updatedTrip;
+      return parseLoadItems(updatedTrip);
     });
   }
 }

@@ -1,18 +1,29 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from './auth.service';
-import { sendSuccess } from '../../utils/response';
+import { sendSuccess, sendCreated } from '../../utils/response';
 import {
   loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
   changePasswordSchema,
   updateProfileSchema,
+  registerAccountSchema,
 } from '@decorflow/shared';
 import { appConfig } from '../../config';
 
 const authService = new AuthService();
 
 export const authController = {
+  registerAccount: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const data = registerAccountSchema.parse(req.body);
+      const result = await authService.registerAccount(data);
+      return sendCreated(res, result);
+    } catch (error) {
+      next(error);
+    }
+  },
+
   login: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const data = loginSchema.parse(req.body);
@@ -48,11 +59,14 @@ export const authController = {
   logout: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { refreshToken } = req.cookies;
-      if (refreshToken) {
-        await authService.logout(refreshToken);
-      }
+      // Cookie value is the refresh JWT; service hashes it and revokes DB row + session
+      await authService.logout(refreshToken);
 
-      res.clearCookie('refreshToken');
+      res.clearCookie('refreshToken', {
+        httpOnly: true,
+        secure: appConfig.isProduction,
+        sameSite: 'strict',
+      });
       return sendSuccess(res, null);
     } catch (error) {
       next(error);

@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
+﻿const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient();
@@ -96,7 +96,13 @@ async function main() {
   let company = await prisma.company.findFirst();
   if (!company) {
     company = await prisma.company.create({
-      data: { name: 'DecorFlow HQ', timeZone: 'UTC', currency: 'USD', language: 'en' },
+      data: { name: 'Ruturaj Farm', timeZone: 'Asia/Kolkata', currency: 'INR', language: 'en' },
+    });
+  } else {
+    // Refresh org identity without clearing logoUrl
+    company = await prisma.company.update({
+      where: { id: company.id },
+      data: { name: 'Ruturaj Farm', timeZone: 'Asia/Kolkata', currency: 'INR' },
     });
   }
 
@@ -161,9 +167,53 @@ async function main() {
     console.log('Upserted Role & Permissions:', role.name);
   }
 
-  const passwordHash = await bcrypt.hash('Password123!', 10);
+  const demoPasswordHash = await bcrypt.hash('Password123!', 10);
+  // Permanent Ruturaj Farm owner credentials (always synced on seed)
+  const OWNER_EMAIL = 'ruturaj@decorflow.com';
+  const OWNER_PASSWORD = 'Ruturaj@123';
+  const ownerPasswordHash = await bcrypt.hash(OWNER_PASSWORD, 10);
+
+  const resetDemoPasswords = process.argv.includes('--reset-demo-passwords');
+  if (resetDemoPasswords) {
+    console.log('SEED MODE: --reset-demo-passwords (will overwrite known demo user passwords)');
+  } else {
+    console.log('SEED MODE: create-if-missing for staff; always sync Ruturaj owner password');
+  }
+
+  // Primary owner — always ensure exists with permanent password + super admin
+  {
+    let owner = await prisma.user.findUnique({ where: { email: OWNER_EMAIL } });
+    if (!owner) {
+      owner = await prisma.user.create({
+        data: {
+          email: OWNER_EMAIL,
+          passwordHash: ownerPasswordHash,
+          name: 'Ruturaj',
+          companyId: company.id,
+          isSuperAdmin: true,
+          isActive: true,
+          isLocked: false,
+        },
+      });
+      console.log('Created permanent owner:', OWNER_EMAIL);
+    } else {
+      await prisma.user.update({
+        where: { id: owner.id },
+        data: {
+          passwordHash: ownerPasswordHash,
+          name: 'Ruturaj',
+          companyId: company.id,
+          isSuperAdmin: true,
+          isActive: true,
+          isLocked: false,
+        },
+      });
+      console.log('Synced permanent owner credentials:', OWNER_EMAIL);
+    }
+  }
+
   const usersData = [
-    { email: 'owner@decorflow.com', name: 'Owner', isSuperAdmin: true, roleName: null },
+    { email: 'owner@decorflow.com', name: 'Ruturaj', isSuperAdmin: true, roleName: null },
     { email: 'admin@decorflow.com', name: 'System Admin', isSuperAdmin: false, roleName: 'Admin' },
     {
       email: 'driver@decorflow.com',
@@ -180,18 +230,30 @@ async function main() {
   ];
 
   for (const u of usersData) {
-    let user = await prisma.user.upsert({
-      where: { email: u.email },
-      update: { companyId: company.id, isSuperAdmin: u.isSuperAdmin, passwordHash: passwordHash },
-      create: {
-        email: u.email,
-        passwordHash: passwordHash,
-        name: u.name,
-        companyId: company.id,
-        isSuperAdmin: u.isSuperAdmin,
-        isActive: true,
-      },
-    });
+    let user = await prisma.user.findUnique({ where: { email: u.email } });
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email: u.email,
+          passwordHash: demoPasswordHash,
+          name: u.name,
+          companyId: company.id,
+          isSuperAdmin: u.isSuperAdmin,
+          isActive: true,
+        },
+      });
+      console.log('Created user:', u.email);
+    } else if (resetDemoPasswords) {
+      // Explicit manual demo reset only — never runs on normal deploy seed
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash: demoPasswordHash },
+      });
+      console.log('Reset demo password:', u.email);
+    } else {
+      console.log('User already exists (password unchanged):', u.email);
+    }
 
     if (u.roleName) {
       const roleId = roleMap[u.roleName].id;
@@ -201,7 +263,6 @@ async function main() {
         create: { userId: user.id, roleId: roleId },
       });
     }
-    console.log('Upserted User & Reset Password:', u.email);
   }
 
   console.log('Seeding completed successfully!');

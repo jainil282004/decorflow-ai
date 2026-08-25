@@ -21,6 +21,7 @@ export {
   changePasswordSchema,
   updateProfileSchema,
   userResponseSchema,
+  registerAccountSchema,
 } from './schemas';
 
 export type {
@@ -30,6 +31,7 @@ export type {
   ChangePasswordDTO,
   UpdateProfileDTO,
   UserResponseDTO,
+  RegisterAccountDTO,
 } from './schemas';
 
 export * from './types';

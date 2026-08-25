@@ -8,11 +8,12 @@ const envSchema = z.object({
   PORT: z.string().default('5000'),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   JWT_SECRET: z.string().min(10),
+  MASTER_ACCOUNT_PASSWORD: z.string().min(6, 'MASTER_ACCOUNT_PASSWORD is required'),
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'http', 'debug']).default('info'),
   CORS_ORIGIN: z.string().optional().default(''),
   /** Public frontend base URL used in password-reset email links */
   APP_URL: z.string().optional().default(''),
-  /** Optional Resend API key — when unset, emails are logged instead of sent */
+  /** Resend API key — required in production; when unset in dev, emails are logged */
   RESEND_API_KEY: z.string().optional().default(''),
   MAIL_FROM: z.string().optional().default('DecorFlow <onboarding@resend.dev>'),
 });

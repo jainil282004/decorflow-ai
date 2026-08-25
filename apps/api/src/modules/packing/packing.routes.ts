@@ -19,6 +19,11 @@ router.patch('/:id', requirePermission('packing.update'), controller.updateItems
 router.post('/:id/start', requirePermission('packing.update'), controller.startPacking);
 router.post('/:id/verify', requirePermission('packing.verify'), controller.verifyJob);
 router.post('/:id/dispatch', requirePermission('dispatch.create'), controller.dispatchJob);
+router.patch(
+  '/:id/dispatch',
+  requirePermission('dispatch.create'),
+  controller.updateDispatchAssignment
+);
 router.post('/:id/return', requirePermission('return.receive'), controller.receiveReturns);
 
 export { router as packingRouter };

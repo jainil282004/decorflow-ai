@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import { AuthRepository } from './auth.repository';
 import { ApiError, ValidationError } from '../../utils/errors';
 import { signAccessToken, signRefreshToken } from '../../utils/jwt';
-import { LoginDTO } from '@decorflow/shared';
+import { LoginDTO, RegisterAccountDTO } from '@decorflow/shared';
 import { PermissionService } from './permission.service';
 import { sendMail } from '../../lib/mail';
 import { env } from '../../config/env';
@@ -19,8 +19,60 @@ export class AuthService {
   private repo = new AuthRepository();
   private permissionService = new PermissionService();
 
+  async registerAccount(data: RegisterAccountDTO) {
+    if (data.masterPassword !== env.MASTER_ACCOUNT_PASSWORD) {
+      throw new ApiError(403, 'Incorrect master password');
+    }
+
+    const email = data.email.trim().toLowerCase();
+    const existing = await this.repo.findUserByEmail(email);
+    if (existing) {
+      throw new ValidationError('An account with this email already exists');
+    }
+
+    let company;
+
+    if (data.accountType === 'OWNER' && data.createNewOrganization && data.organizationName) {
+      company = await this.repo.createCompany(data.organizationName);
+    } else {
+      company = await this.repo.findAnyCompany();
+    }
+
+    let isSuperAdmin = false;
+    let roleId: string | undefined = undefined;
+
+    if (data.accountType === 'OWNER') {
+      isSuperAdmin = true;
+    } else if (data.accountType === 'DRIVER') {
+      const role = await this.repo.findOrCreateRoleByName('Driver', company.id);
+      roleId = role.id;
+    } else if (data.accountType === 'WAREHOUSE') {
+      const role = await this.repo.findOrCreateRoleByName('Inventory Manager', company.id);
+      roleId = role.id;
+    }
+
+    const passwordHash = await bcrypt.hash(data.password, 10);
+
+    const user = await this.repo.createUserWithRole({
+      email,
+      passwordHash,
+      name: data.name.trim(),
+      companyId: company.id,
+      isSuperAdmin,
+      roleId,
+    });
+
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      isSuperAdmin: user.isSuperAdmin,
+    };
+  }
+
   async login(data: LoginDTO, ipAddress?: string, userAgent?: string) {
-    const user = await this.repo.findUserByEmail(data.email);
+    const email = data.email.trim().toLowerCase();
+    const user = await this.repo.findUserByEmail(email);
 
     if (!user || !user.isActive) {
       throw new ApiError(401, 'Invalid credentials');
@@ -76,8 +128,25 @@ export class AuthService {
     return { accessToken };
   }
 
-  async logout(sessionId: string) {
-    await this.repo.revokeSession(sessionId);
+  /**
+   * Invalidate the refresh-token cookie server-side.
+   * Accepts the raw refresh JWT from the httpOnly cookie (not a session UUID).
+   * Idempotent: missing/unknown/already-revoked tokens are a no-op.
+   */
+  async logout(refreshToken?: string) {
+    if (!refreshToken) return;
+
+    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+    const stored = await this.repo.findRefreshToken(tokenHash);
+
+    if (!stored || stored.isRevoked) return;
+
+    if (stored.sessionId) {
+      await this.repo.revokeSession(stored.sessionId);
+      return;
+    }
+
+    await this.repo.revokeRefreshTokenByHash(tokenHash);
   }
 
   async getProfile(userId: string) {
