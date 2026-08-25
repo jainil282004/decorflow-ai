@@ -8,10 +8,19 @@ import {
   useDispatchJob,
   useReceiveReturns,
 } from './api/packingApi';
+import { useVehicles, useDrivers } from '../logistics/api/logisticsApi';
 import { PageHeader } from '../../components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
 import { Icon } from '../../components/ui/icon';
 import { Loader2 } from 'lucide-react';
 import { Skeleton } from '../../components/ui/skeleton';
@@ -29,9 +38,15 @@ export const PackingDetailsPage = () => {
   const dispatchJob = useDispatchJob(id!);
   const receiveReturns = useReceiveReturns(id!);
 
+  const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
+  const { data: drivers, isLoading: driversLoading } = useDrivers();
+
   const [conditionDialogOpen, setConditionDialogOpen] = useState(false);
   /** Draft picked qty keyed by packing line id — staff must enter these explicitly. */
   const [pickedDraft, setPickedDraft] = useState<Record<string, number>>({});
+  const [dispatchVehicleId, setDispatchVehicleId] = useState('');
+  const [dispatchDriverId, setDispatchDriverId] = useState('');
+  const [dispatchNotes, setDispatchNotes] = useState('');
 
   useEffect(() => {
     if (!job?.items) return;
@@ -41,6 +56,13 @@ export const PackingDetailsPage = () => {
     }
     setPickedDraft(next);
   }, [job?.id, job?.status, job?.items]);
+
+  useEffect(() => {
+    if (job?.status !== 'VERIFIED') return;
+    setDispatchVehicleId(job.vehicleId || '');
+    setDispatchDriverId(job.driverId || '');
+    setDispatchNotes(job.dispatchNotes || '');
+  }, [job?.id, job?.status, job?.vehicleId, job?.driverId, job?.dispatchNotes]);
 
   if (isLoading) {
     return (
@@ -85,6 +107,11 @@ export const PackingDetailsPage = () => {
     job.items?.length > 0 &&
     job.items.every((item: any) => (pickedDraft[item.id] ?? 0) === item.expectedQuantity);
 
+  const activeVehicles = (vehicles || []).filter((v: any) => v.status === 'ACTIVE');
+  const assignableDrivers = (drivers || []).filter((d: any) => d.availabilityStatus !== 'ON_LEAVE');
+  const canDispatch =
+    Boolean(dispatchVehicleId) && Boolean(dispatchDriverId) && !dispatchJob.isPending;
+
   const handleStartPacking = () => {
     // Opens the packing session only — does not mark any quantities as picked.
     startPacking.mutate();
@@ -105,9 +132,11 @@ export const PackingDetailsPage = () => {
   };
 
   const handleDispatch = () => {
+    if (!dispatchVehicleId || !dispatchDriverId) return;
     dispatchJob.mutate({
-      dispatchNotes: 'Dispatched to venue.',
-      dispatchChecklist: JSON.stringify({ vehicleChecked: true, loadedSafely: true }),
+      vehicleId: dispatchVehicleId,
+      driverId: dispatchDriverId,
+      dispatchNotes: dispatchNotes.trim() || undefined,
     });
   };
 
@@ -144,7 +173,7 @@ export const PackingDetailsPage = () => {
             </Button>
           )}
           {job.status === 'VERIFIED' && (
-            <Button onClick={handleDispatch} disabled={dispatchJob.isPending}>
+            <Button onClick={handleDispatch} disabled={!canDispatch}>
               {dispatchJob.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Dispatch to Venue
             </Button>
@@ -289,6 +318,81 @@ export const PackingDetailsPage = () => {
             </CardContent>
           </Card>
 
+          {job.status === 'VERIFIED' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg font-serif">Dispatch</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Choose vehicle and driver before dispatching to the venue.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="dispatch-vehicle">Vehicle</Label>
+                  <Select
+                    value={dispatchVehicleId || undefined}
+                    onValueChange={setDispatchVehicleId}
+                    disabled={vehiclesLoading}
+                  >
+                    <SelectTrigger id="dispatch-vehicle">
+                      <SelectValue
+                        placeholder={vehiclesLoading ? 'Loading vehicles…' : 'Select vehicle'}
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {activeVehicles.map((v: any) => (
+                        <SelectItem key={v.id} value={v.id}>
+                          {v.licensePlate} — {v.make} {v.model}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {!vehiclesLoading && activeVehicles.length === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      No active vehicles in fleet. Add one under Fleet first.
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dispatch-driver">Driver</Label>
+                  <Select
+                    value={dispatchDriverId || undefined}
+                    onValueChange={setDispatchDriverId}
+                    disabled={driversLoading}
+                  >
+                    <SelectTrigger id="dispatch-driver">
+                      <SelectValue
+                        placeholder={driversLoading ? 'Loading drivers…' : 'Select driver'}
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {assignableDrivers.map((d: any) => (
+                        <SelectItem key={d.id} value={d.id}>
+                          {d.user?.name || d.licenseNumber}
+                          {d.availabilityStatus === 'ON_TRIP' ? ' (on trip)' : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {!driversLoading && assignableDrivers.length === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      No assignable drivers. Add one under Fleet first.
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dispatch-notes">Notes (optional)</Label>
+                  <Input
+                    id="dispatch-notes"
+                    value={dispatchNotes}
+                    onChange={(e) => setDispatchNotes(e.target.value)}
+                    placeholder="e.g. Load bay B, call on arrival"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle className="text-lg font-serif">Audit Trail</CardTitle>
@@ -320,6 +424,15 @@ export const PackingDetailsPage = () => {
                     <p className="text-xs text-muted-foreground">
                       {new Date(job.dispatchedAt).toLocaleString()}
                     </p>
+                    {(job.vehicle || job.driver) && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {job.vehicle
+                          ? `${job.vehicle.licensePlate} (${job.vehicle.make} ${job.vehicle.model})`
+                          : 'No vehicle'}
+                        {' · '}
+                        {job.driver?.user?.name || job.driver?.licenseNumber || 'No driver'}
+                      </p>
+                    )}
                   </div>
                 )}
                 {job.returnedAt && (

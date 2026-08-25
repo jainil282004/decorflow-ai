@@ -6,12 +6,25 @@ import { Badge } from '../../components/ui/badge';
 import { format } from 'date-fns';
 import { useTasks, useToggleTaskChecklist } from './api/workforceApi';
 import { Progress } from '../../components/ui/progress';
+import { FetchErrorState } from '../../components/ui/fetch-error-state';
 
 export const TaskBoard = () => {
-  const { data: tasks, isLoading } = useTasks();
+  const { data: tasks, isLoading, isError, refetch } = useTasks();
   const toggleChecklist = useToggleTaskChecklist();
 
   if (isLoading) return <div className="p-12 text-center">Loading Tasks...</div>;
+
+  if (isError) {
+    return (
+      <div className="space-y-8">
+        <PageHeader
+          title="Task Management"
+          description="Kanban board for tracking operational tasks across the team."
+        />
+        <FetchErrorState entity="tasks" onRetry={() => refetch()} />
+      </div>
+    );
+  }
 
   const columns = [
     { id: 'TODO', title: 'To Do', color: 'border-slate-200 bg-slate-50/50' },

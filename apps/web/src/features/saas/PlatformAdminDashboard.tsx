@@ -2,7 +2,7 @@ import { PageHeader } from '../../components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { usePlatformStats } from './api/saasApi';
 import { Building2, Users, CreditCard, TrendingUp, AlertTriangle } from 'lucide-react';
-import { formatCurrency } from '../reports/FinancialDashboard'; // Reusing utility
+import { formatCurrency } from '../../utils'; // Reusing utility
 
 export const PlatformAdminDashboard = () => {
   const { data: stats, isLoading, error } = usePlatformStats();

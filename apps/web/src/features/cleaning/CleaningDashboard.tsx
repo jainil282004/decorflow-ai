@@ -21,6 +21,7 @@ import { Button } from '../../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Skeleton } from '../../components/ui/skeleton';
 import { EmptyState } from '../../components/ui/empty-state';
+import { FetchErrorState } from '../../components/ui/fetch-error-state';
 import { useToast } from '../../hooks/use-toast';
 import { useCleaningJobs, useCleaningReminders, useUpdateCleaningJob } from './api/cleaningApi';
 import { Sparkles, CheckCircle2, Play, AlertCircle, RefreshCw } from 'lucide-react';
@@ -160,13 +161,7 @@ export const CleaningDashboard = () => {
     if (error) {
       return (
         <div className="py-10 px-4">
-          <EmptyState
-            title="Could not load cleaning jobs"
-            description="Something went wrong while fetching wash data. Check your connection and try again."
-            icon={<AlertCircle className="w-12 h-12 text-destructive/60" />}
-            actionLabel="Try again"
-            onAction={() => onRetry()}
-          />
+          <FetchErrorState entity="cleaning jobs" onRetry={onRetry} />
         </div>
       );
     }

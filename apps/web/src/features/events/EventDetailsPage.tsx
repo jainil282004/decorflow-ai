@@ -5,11 +5,11 @@ import { Button } from '../../components/ui/button';
 import { Icon } from '../../components/ui/icon';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
-import { format } from 'date-fns';
+
 import { Skeleton } from '../../components/ui/skeleton';
 import { EmptyState } from '../../components/ui/empty-state';
 import { AlertCircle } from 'lucide-react';
-import { formatCurrency } from '../../utils';
+import { formatCurrency, safeFormatDate } from '../../utils';
 
 export const EventDetailsPage = () => {
   const { id } = useParams();
@@ -134,7 +134,9 @@ export const EventDetailsPage = () => {
               <div className="relative">
                 <div className="absolute -left-[29px] bg-background border border-border w-2.5 h-2.5 rounded-full mt-2" />
                 <h4 className="font-serif text-xl tracking-tight text-foreground">
-                  {event.setupDate ? format(new Date(event.setupDate), 'h:mm a') : '08:00 AM'}
+                  {event.setupDate
+                    ? safeFormatDate(event.setupDate, 'h:mm a', '08:00 AM')
+                    : '08:00 AM'}
                 </h4>
                 <p className="font-medium text-foreground text-sm mt-1">Crew Arrival & Setup</p>
                 <p className="text-sm text-muted-foreground font-light">
@@ -172,7 +174,7 @@ export const EventDetailsPage = () => {
                 <div className="absolute -left-[29px] bg-background border border-border w-2.5 h-2.5 rounded-full mt-2" />
                 <h4 className="font-serif text-xl tracking-tight text-foreground">
                   {event.dismantleDate
-                    ? format(new Date(event.dismantleDate), 'h:mm a')
+                    ? safeFormatDate(event.dismantleDate, 'h:mm a', '11:30 PM')
                     : '11:30 PM'}
                 </h4>
                 <p className="font-medium text-foreground text-sm mt-1">Breakdown</p>

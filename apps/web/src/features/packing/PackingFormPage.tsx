@@ -24,16 +24,16 @@ export const PackingFormPage = () => {
   const createJob = useCreatePackingJob();
 
   const events = eventsResponse?.data || [];
-  const inventoryItems = inventoryResponse?.data || [];
 
   const variants = useMemo(() => {
-    return inventoryItems.flatMap((item: any) =>
+    const items = inventoryResponse?.data || [];
+    return items.flatMap((item: any) =>
       (item.variants || []).map((variant: any) => ({
         id: variant.id,
         label: `${item.name} — ${variant.name}`,
       }))
     );
-  }, [inventoryItems]);
+  }, [inventoryResponse?.data]);
 
   const [eventId, setEventId] = useState('');
   const [selectedVariantId, setSelectedVariantId] = useState('');

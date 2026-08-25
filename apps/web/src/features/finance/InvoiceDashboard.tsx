@@ -17,6 +17,7 @@ import { useInvoices, useQuotations } from './api/financeApi';
 import { formatCurrency } from '../../utils';
 import { Skeleton } from '../../components/ui/skeleton';
 import { EmptyState } from '../../components/ui/empty-state';
+import { FetchErrorState } from '../../components/ui/fetch-error-state';
 import { format } from 'date-fns';
 
 import { useNavigate } from 'react-router-dom';
@@ -24,8 +25,18 @@ import { useNavigate } from 'react-router-dom';
 export const InvoiceDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('invoices');
-  const { data: invoices, isLoading: invoicesLoading } = useInvoices();
-  const { data: quotations, isLoading: quotationsLoading } = useQuotations();
+  const {
+    data: invoices,
+    isLoading: invoicesLoading,
+    isError: invoicesError,
+    refetch: refetchInvoices,
+  } = useInvoices();
+  const {
+    data: quotations,
+    isLoading: quotationsLoading,
+    isError: quotationsError,
+    refetch: refetchQuotations,
+  } = useQuotations();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -93,6 +104,12 @@ export const InvoiceDashboard = () => {
                         </div>
                       </TableCell>
                     </TableRow>
+                  ) : invoicesError ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="p-0">
+                        <FetchErrorState entity="invoices" onRetry={() => refetchInvoices()} />
+                      </TableCell>
+                    </TableRow>
                   ) : invoices?.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="p-0">
@@ -154,6 +171,12 @@ export const InvoiceDashboard = () => {
                           <Skeleton className="h-10 w-full" />
                           <Skeleton className="h-[200px] w-full" />
                         </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : quotationsError ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="p-0">
+                        <FetchErrorState entity="quotations" onRetry={() => refetchQuotations()} />
                       </TableCell>
                     </TableRow>
                   ) : quotations?.length === 0 ? (

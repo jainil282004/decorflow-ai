@@ -14,12 +14,24 @@ import {
 } from '../../components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Badge } from '../../components/ui/badge';
+import { EmptyState } from '../../components/ui/empty-state';
+import { FetchErrorState } from '../../components/ui/fetch-error-state';
 import { useEmployees, useTeams } from './api/workforceApi';
 
 export const WorkforceDashboard = () => {
   const navigate = useNavigate();
-  const { data: employees, isLoading: employeesLoading } = useEmployees();
-  const { data: teams, isLoading: teamsLoading } = useTeams();
+  const {
+    data: employees,
+    isLoading: employeesLoading,
+    isError: employeesError,
+    refetch: refetchEmployees,
+  } = useEmployees();
+  const {
+    data: teams,
+    isLoading: teamsLoading,
+    isError: teamsError,
+    refetch: refetchTeams,
+  } = useTeams();
   const [activeTab, setActiveTab] = useState('employees');
 
   return (
@@ -74,10 +86,21 @@ export const WorkforceDashboard = () => {
                       Loading employees...
                     </TableCell>
                   </TableRow>
+                ) : employeesError ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="p-0">
+                      <FetchErrorState entity="employees" onRetry={() => refetchEmployees()} />
+                    </TableCell>
+                  </TableRow>
                 ) : employees?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
-                      No employees found.
+                    <TableCell colSpan={6} className="p-0">
+                      <EmptyState
+                        title="No employees found"
+                        description="Add an employee to start managing your workforce."
+                        actionLabel="Add Employee"
+                        onAction={() => navigate('/workforce/employees/new')}
+                      />
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -122,9 +145,18 @@ export const WorkforceDashboard = () => {
               <div className="col-span-full text-center text-muted-foreground p-12">
                 Loading teams...
               </div>
+            ) : teamsError ? (
+              <div className="col-span-full">
+                <FetchErrorState entity="teams" onRetry={() => refetchTeams()} />
+              </div>
             ) : teams?.length === 0 ? (
-              <div className="col-span-full text-center text-muted-foreground p-12">
-                No teams found.
+              <div className="col-span-full">
+                <EmptyState
+                  title="No teams found"
+                  description="Create a team to group employees for event assignments."
+                  actionLabel="Create Team"
+                  onAction={() => navigate('/workforce/teams/new')}
+                />
               </div>
             ) : (
               teams?.map((team: any) => (

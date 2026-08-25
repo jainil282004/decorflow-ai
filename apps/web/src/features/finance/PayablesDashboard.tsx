@@ -17,12 +17,23 @@ import { useVendorBills, useExpenses } from './api/financeApi';
 import { formatCurrency } from '../../utils';
 import { Skeleton } from '../../components/ui/skeleton';
 import { EmptyState } from '../../components/ui/empty-state';
+import { FetchErrorState } from '../../components/ui/fetch-error-state';
 import { format } from 'date-fns';
 
 export const PayablesDashboard = () => {
   const [activeTab, setActiveTab] = useState('bills');
-  const { data: bills, isLoading: billsLoading } = useVendorBills();
-  const { data: expenses, isLoading: expensesLoading } = useExpenses();
+  const {
+    data: bills,
+    isLoading: billsLoading,
+    isError: billsError,
+    refetch: refetchBills,
+  } = useVendorBills();
+  const {
+    data: expenses,
+    isLoading: expensesLoading,
+    isError: expensesError,
+    refetch: refetchExpenses,
+  } = useExpenses();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -89,6 +100,12 @@ export const PayablesDashboard = () => {
                         </div>
                       </TableCell>
                     </TableRow>
+                  ) : billsError ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="p-0">
+                        <FetchErrorState entity="vendor bills" onRetry={() => refetchBills()} />
+                      </TableCell>
+                    </TableRow>
                   ) : bills?.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={7} className="p-0">
@@ -145,6 +162,12 @@ export const PayablesDashboard = () => {
                           <Skeleton className="h-10 w-full" />
                           <Skeleton className="h-[200px] w-full" />
                         </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : expensesError ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="p-0">
+                        <FetchErrorState entity="expenses" onRetry={() => refetchExpenses()} />
                       </TableCell>
                     </TableRow>
                   ) : expenses?.length === 0 ? (

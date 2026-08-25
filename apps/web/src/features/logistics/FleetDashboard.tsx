@@ -16,14 +16,30 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/ta
 import { Badge } from '../../components/ui/badge';
 import { Skeleton } from '../../components/ui/skeleton';
 import { EmptyState } from '../../components/ui/empty-state';
-import { format } from 'date-fns';
+import { FetchErrorState } from '../../components/ui/fetch-error-state';
 import { useVehicles, useDrivers, useTrips } from './api/logisticsApi';
+import { safeFormatDate } from '../../utils';
 
 export const FleetDashboard = () => {
   const navigate = useNavigate();
-  const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
-  const { data: drivers, isLoading: driversLoading } = useDrivers();
-  const { data: trips, isLoading: tripsLoading } = useTrips();
+  const {
+    data: vehicles,
+    isLoading: vehiclesLoading,
+    isError: vehiclesError,
+    refetch: refetchVehicles,
+  } = useVehicles();
+  const {
+    data: drivers,
+    isLoading: driversLoading,
+    isError: driversError,
+    refetch: refetchDrivers,
+  } = useDrivers();
+  const {
+    data: trips,
+    isLoading: tripsLoading,
+    isError: tripsError,
+    refetch: refetchTrips,
+  } = useTrips();
   const [activeTab, setActiveTab] = useState('trips');
 
   return (
@@ -104,6 +120,10 @@ export const FleetDashboard = () => {
                 <Skeleton className="h-12 w-full" />
                 <Skeleton className="h-[200px] w-full" />
               </div>
+            ) : tripsError ? (
+              <div className="p-4">
+                <FetchErrorState entity="trips" onRetry={() => refetchTrips()} />
+              </div>
             ) : trips?.length === 0 ? (
               <EmptyState
                 title="No active trips"
@@ -143,7 +163,7 @@ export const FleetDashboard = () => {
                       </TableCell>
                       <TableCell>
                         {trip.plannedDeparture
-                          ? format(new Date(trip.plannedDeparture), 'MMM d, h:mm a')
+                          ? safeFormatDate(trip.plannedDeparture, 'MMM d, h:mm a', '-')
                           : '-'}
                       </TableCell>
                       <TableCell>{trip.destinationVenue?.name || 'Warehouse'}</TableCell>
@@ -189,6 +209,10 @@ export const FleetDashboard = () => {
               <div className="p-8 space-y-4">
                 <Skeleton className="h-12 w-full" />
                 <Skeleton className="h-[200px] w-full" />
+              </div>
+            ) : vehiclesError ? (
+              <div className="p-4">
+                <FetchErrorState entity="vehicles" onRetry={() => refetchVehicles()} />
               </div>
             ) : vehicles?.length === 0 ? (
               <EmptyState
@@ -248,6 +272,10 @@ export const FleetDashboard = () => {
               <div className="p-8 space-y-4">
                 <Skeleton className="h-12 w-full" />
                 <Skeleton className="h-[200px] w-full" />
+              </div>
+            ) : driversError ? (
+              <div className="p-4">
+                <FetchErrorState entity="drivers" onRetry={() => refetchDrivers()} />
               </div>
             ) : drivers?.length === 0 ? (
               <EmptyState title="No drivers" description="There are no drivers in your system." />

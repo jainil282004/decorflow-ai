@@ -25,7 +25,7 @@ export function safeFormatDate(
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return fallback;
     return format(d, formatStr);
-  } catch (e) {
+  } catch {
     return fallback;
   }
 }

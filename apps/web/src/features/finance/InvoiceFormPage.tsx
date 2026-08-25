@@ -81,7 +81,7 @@ export const InvoiceFormPage = () => {
       }))
     );
     toast({ title: `Filled in from quotation ${selectedQuotation.number}` });
-  }, [selectedQuotation]);
+  }, [selectedQuotation, form, replace, toast]);
 
   const watchedItems = form.watch('items');
   const subtotal = watchedItems.reduce((acc, item) => acc + item.quantity * item.unitPrice, 0);

@@ -18,11 +18,22 @@ import { format } from 'date-fns';
 import { useOrders, useVendors, useRequisitions, useLowStock } from './api/procurementApi';
 import { Skeleton } from '../../components/ui/skeleton';
 import { EmptyState } from '../../components/ui/empty-state';
+import { FetchErrorState } from '../../components/ui/fetch-error-state';
 
 export const ProcurementDashboard = () => {
   const navigate = useNavigate();
-  const { data: orders, isLoading: ordersLoading } = useOrders();
-  const { data: vendors, isLoading: vendorsLoading } = useVendors();
+  const {
+    data: orders,
+    isLoading: ordersLoading,
+    isError: ordersError,
+    refetch: refetchOrders,
+  } = useOrders();
+  const {
+    data: vendors,
+    isLoading: vendorsLoading,
+    isError: vendorsError,
+    refetch: refetchVendors,
+  } = useVendors();
   const { data: requisitions } = useRequisitions();
   const { data: lowStock } = useLowStock();
   const [activeTab, setActiveTab] = useState('orders');
@@ -142,6 +153,12 @@ export const ProcurementDashboard = () => {
                       </div>
                     </TableCell>
                   </TableRow>
+                ) : ordersError ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="p-0">
+                      <FetchErrorState entity="purchase orders" onRetry={() => refetchOrders()} />
+                    </TableCell>
+                  </TableRow>
                 ) : orders?.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="p-0">
@@ -209,6 +226,12 @@ export const ProcurementDashboard = () => {
                         <Skeleton className="h-10 w-full" />
                         <Skeleton className="h-[200px] w-full" />
                       </div>
+                    </TableCell>
+                  </TableRow>
+                ) : vendorsError ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="p-0">
+                      <FetchErrorState entity="vendors" onRetry={() => refetchVendors()} />
                     </TableCell>
                   </TableRow>
                 ) : vendors?.length === 0 ? (

@@ -16,6 +16,7 @@ import { Button } from '../../components/ui/button';
 import { Icon } from '../../components/ui/icon';
 import { Skeleton } from '../../components/ui/skeleton';
 import { EmptyState } from '../../components/ui/empty-state';
+import { FetchErrorState } from '../../components/ui/fetch-error-state';
 import { format } from 'date-fns';
 
 export const PackingDashboard = () => {
@@ -24,7 +25,7 @@ export const PackingDashboard = () => {
   const [status, setStatus] = useState<string | undefined>();
   const limit = 10;
 
-  const { data, isLoading } = usePackingJobs(page, limit, status);
+  const { data, isLoading, isError, refetch } = usePackingJobs(page, limit, status);
 
   const renderStatusBadge = (status: string) => {
     switch (status) {
@@ -147,6 +148,10 @@ export const PackingDashboard = () => {
           <div className="p-8 space-y-4">
             <Skeleton className="h-12 w-full" />
             <Skeleton className="h-[200px] w-full" />
+          </div>
+        ) : isError ? (
+          <div className="p-4">
+            <FetchErrorState entity="packing jobs" onRetry={() => refetch()} />
           </div>
         ) : !data?.data?.length ? (
           <EmptyState

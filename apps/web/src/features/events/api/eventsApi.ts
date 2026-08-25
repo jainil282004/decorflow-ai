@@ -131,8 +131,9 @@ export const useDeleteEvent = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: archiveEvent,
-    onSuccess: () => {
+    onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['events', id] });
     },
   });
 };
@@ -141,8 +142,9 @@ export const useRestoreEvent = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: restoreEvent,
-    onSuccess: () => {
+    onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['events', id] });
     },
   });
 };

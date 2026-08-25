@@ -52,7 +52,7 @@ const formatDate = (value?: string | Date | null) => {
   });
 };
 
-export const formatInr = (value: number) =>
+const formatInr = (value: number) =>
   new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',

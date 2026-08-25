@@ -39,7 +39,7 @@ export interface FinanceExportPayload {
 
 const sanitizeFilenamePart = (value: string) =>
   value
-    .replace(/[^\w\-]+/g, '_')
+    .replace(/[^\w-]+/g, '_')
     .replace(/_+/g, '_')
     .replace(/^_|_$/g, '');
 

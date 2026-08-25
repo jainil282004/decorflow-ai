@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -132,12 +132,16 @@ export const InventoryFormPage = () => {
   });
 
   const selectedCategoryId = useWatch({ control: form.control, name: 'categoryId' });
-  const allCategories = (categories ?? []) as CategoryOption[];
-  const hasHierarchy = allCategories.some((c) => !!c.parentId);
-  const parentCategories = hasHierarchy ? allCategories.filter((c) => !c.parentId) : allCategories;
-  const subcategories = hasHierarchy
-    ? allCategories.filter((c) => c.parentId === selectedCategoryId)
-    : [];
+  const allCategories = useMemo(() => (categories ?? []) as CategoryOption[], [categories]);
+  const hasHierarchy = useMemo(() => allCategories.some((c) => !!c.parentId), [allCategories]);
+  const parentCategories = useMemo(
+    () => (hasHierarchy ? allCategories.filter((c) => !c.parentId) : allCategories),
+    [hasHierarchy, allCategories]
+  );
+  const subcategories = useMemo(
+    () => (hasHierarchy ? allCategories.filter((c) => c.parentId === selectedCategoryId) : []),
+    [hasHierarchy, allCategories, selectedCategoryId]
+  );
 
   useEffect(() => {
     if (data?.data) {

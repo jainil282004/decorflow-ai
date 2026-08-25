@@ -11,13 +11,14 @@ import {
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { useQuotations } from '../finance/api/financeApi';
-import { formatCurrency } from '../reports/FinancialDashboard';
+import { formatCurrency } from '../../utils';
 import { Eye, Plus } from 'lucide-react';
 import { Skeleton } from '../../components/ui/skeleton';
 import { EmptyState } from '../../components/ui/empty-state';
+import { FetchErrorState } from '../../components/ui/fetch-error-state';
 
 export const QuotationListPage = () => {
-  const { data: quotations, isLoading } = useQuotations();
+  const { data: quotations, isLoading, isError, refetch } = useQuotations();
 
   return (
     <div className="space-y-6">
@@ -66,6 +67,12 @@ export const QuotationListPage = () => {
                   </TableCell>
                 </TableRow>
               ))
+            ) : isError ? (
+              <TableRow>
+                <TableCell colSpan={6} className="p-0">
+                  <FetchErrorState entity="quotations" onRetry={() => refetch()} />
+                </TableCell>
+              </TableRow>
             ) : quotations?.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="p-0">

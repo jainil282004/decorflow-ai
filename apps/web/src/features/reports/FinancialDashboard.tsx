@@ -16,8 +16,6 @@ import {
 import { Skeleton } from '../../components/ui/skeleton';
 import { formatCurrency } from '../../utils';
 
-export { formatCurrency };
-
 export const FinancialDashboard = () => {
   const { data: analytics, isLoading } = useFinancialAnalytics();
 

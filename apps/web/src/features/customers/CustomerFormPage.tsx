@@ -89,7 +89,7 @@ export function CustomerFormPage() {
           })) || [],
       });
     }
-  }, [isEditing, response, form.reset]);
+  }, [isEditing, response, form]);
 
   const onSubmit = (data: CreateCustomerDTO) => {
     if (isEditing) {

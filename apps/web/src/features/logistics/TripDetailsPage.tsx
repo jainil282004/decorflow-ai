@@ -106,7 +106,7 @@ export const TripDetailsPage = () => {
         },
       });
       toast({ title: 'Trip dispatched successfully!' });
-    } catch (e) {
+    } catch {
       toast({ title: 'Error dispatching trip', variant: 'destructive' });
     }
   };
@@ -133,7 +133,7 @@ export const TripDetailsPage = () => {
         },
       });
       toast({ title: 'Trip completed successfully!' });
-    } catch (e) {
+    } catch {
       toast({ title: 'Error completing trip', variant: 'destructive' });
     }
   };
